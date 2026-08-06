@@ -9,45 +9,41 @@ This is NOT intended to be a public-facing project — it's a personalized deskt
 
 ```
 ~/work-linux/projects/arch/shell/
-├── .agent/          ← THIS FOLDER — agentic context, docs, roadmap
-├── lunar-shell/     ← Fork of caelestia-dots/shell (QML/QuickShell)
+├── lunar-shell/     ← Fork of caelestia-dots/shell (QML/QuickShell & C++ plugins)
+│   └── .agent/      ← Agentic context, docs, roadmap (tracked in lunar-shell)
 ├── lunar-cli/       ← Fork of caelestia-dots/cli (Python CLI)
 └── lunar-lock/      ← Fork of Darkkal44/qylock (lock screen themes)
 ```
 
-## Upstream Remotes
+## Remotes Setup
 
-| Repo | Upstream | Our GitHub (after forking) |
+| Repo | Upstream | Our GitHub Fork (origin) |
 |------|----------|---------------------------|
 | `lunar-shell` | `https://github.com/caelestia-dots/shell.git` | `https://github.com/Nuwantha005/lunar-shell.git` |
 | `lunar-cli` | `https://github.com/caelestia-dots/cli.git` | `https://github.com/Nuwantha005/lunar-cli.git` |
 | `lunar-lock` | `https://github.com/Darkkal44/qylock.git` | `https://github.com/Nuwantha005/lunar-lock.git` |
 
-After forking on GitHub, add origin in each repo:
-```bash
-# Example for lunar-shell:
-cd lunar-shell
-git remote add origin https://github.com/Nuwantha005/lunar-shell.git
-git push -u origin main
-```
-
-## Key Decisions Made
+## Key Decisions & Architecture
 
 - **Name**: `lunar` (shell, cli, lock)
-- **Colour engine**: Material You (M3 tokens via `materialyoucolor`). M3 colours are funnelled to pywalfox for Firefox theming.
-- **Theme storage**: `~/Pictures/themes/<name>/` with `wallpapers/` and `pfp/` subdirs. One wallpapers folder serves both desktop and lock screen.
-- **pfp selection**: Stored as `selectedPfp` path inside `theme.json`. No separate picker state file.
-- **Lock screen**: Deep Qylock integration — Qylock themes run inside the lunar-shell QuickShell process (not a separate process). Backend (caelestia/qylock/hyprlock) stored in `~/.local/state/caelestia/theme.json`.
-- **Pickers**: Native QuickShell QML panels, matching Caelestia's existing wallpaper picker style.
-- **Upstream merging**: Via `git fetch upstream` + `git cherry-pick` for selective updates.
+- **AUR Removal**: Uninstalled `caelestia-shell` and `caelestia-cli` from AUR. Built directly from `lunar-shell` and installed to system paths (`/usr/lib/qt6/qml/Caelestia`, `/etc/xdg/quickshell/caelestia`).
+- **CMake QML Versioning**: Set `VERSION 1.0` in `plugin/cmake/qml-module.cmake` so C++ `QML_ELEMENT` types (like `LogindManager`) export cleanly as version 1.0 instead of 254.0.
+- **CLI Executable**: `~/.local/bin/caelestia` wrapper script calling `lunar-cli` via `~/.local/lib/python3.14/site-packages/caelestia` symlink.
+- **Lock Screen Themes**: Local relative symlink `lunar-shell/lock-themes` → `../lunar-lock/themes/` (ignored in `.gitignore`). Zero overhead, direct editing.
+- **Colour Engine**: Material You (M3 tokens via `materialyoucolor`). M3 colours funnelled to pywalfox for Firefox theming.
+- **Theme Storage**: `~/Pictures/themes/<name>/` with `wallpapers/` and `pfp/` subdirs. One wallpapers folder serves both desktop and lock screen.
+- **Upstream Merging**: Via `git fetch upstream` + `git cherry-pick` / `git merge upstream/main`.
 
 ## Current Status
 
-- [x] Repos copied and git remotes configured
-- [x] .agent docs written
-- [ ] GitHub forks created and `origin` remotes set
-- [ ] Local dev environment activated (manifest.conf redirect)
-- [ ] pip editable install for lunar-cli
+- [x] Repos copied and git remotes configured (upstream & origin)
+- [x] `.agent` docs created & committed to `lunar-shell/.agent/`
+- [x] GitHub forks created and remotes connected
+- [x] AUR packages removed (`caelestia-shell`, `caelestia-cli`)
+- [x] System build & install configured (`lunar-shell/build`)
+- [x] `VERSION 1.0` fix applied in `plugin/cmake/qml-module.cmake`
+- [x] `caelestia` CLI wrapper installed to `~/.local/bin/caelestia`
+- [x] `lunar-lock` connected via `lock-themes` symlink
 - [ ] Theme engine implementation (Phase 2)
 - [ ] Dynamic colour persistence fix (Phase 3)
 - [ ] Lock screen integration (Phase 4)
@@ -55,8 +51,20 @@ git push -u origin main
 
 ## Quick Reference
 
-- **Restart shell**: `pkill quickshell; quickshell &`
-- **Check shell logs**: `journalctl --user -f -u quickshell` or `QUICKSHELL_LOG=debug quickshell`
-- **Current wallpaper**: `cat ~/.local/state/caelestia/wallpaper/path.txt`
-- **Current scheme**: `cat ~/.local/state/caelestia/scheme.json | python3 -m json.tool`
-- **Rollback**: `~/.local/bin/lunar-rollback`
+- **Build & System Install**:
+  ```bash
+  cd ~/work-linux/projects/arch/shell/lunar-shell
+  cmake -B build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX="/" \
+      -DINSTALL_LIBDIR="usr/lib/caelestia" \
+      -DINSTALL_QMLDIR="usr/lib/qt6/qml" \
+      -DINSTALL_QSCONFDIR="etc/xdg/quickshell/caelestia" \
+      -DENABLE_MODULES="extras;plugin;shell;m3shapes" \
+      -DDISTRIBUTOR="lunar-fork"
+  ninja -C build
+  sudo ninja -C build install
+  ```
+- **Restart Shell**: `caelestia shell -d`
+- **Check Shell Logs**: `caelestia shell --log` or `qs -p ~/work-linux/projects/arch/shell/lunar-shell log`
+- **Current Scheme**: `cat ~/.local/state/caelestia/scheme.json | python3 -m json.tool`

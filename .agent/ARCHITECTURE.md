@@ -154,12 +154,6 @@ modules/
         PdfMarker.qml
 ```
 
-## Compatibility Note
-
-The Python package is intentionally kept as `caelestia` (not renamed to `lunar`) because:
-1. The QML shell calls `caelestia` commands via `Quickshell.execDetached(["caelestia", ...])`
-2. The hyprland configs and existing keybinds reference `caelestia`
-3. Renaming would require changing every QML file and every config
-
-The binary at `/usr/bin/caelestia` stays as-is from the AUR package. Our fork
-installs via `pip install -e .` which takes precedence over the AUR package's Python files.
+The CLI package is kept named `caelestia` for internal compatibility.
+The executable is installed to `~/.local/bin/caelestia` as a Python wrapper script, calling our `caelestia` Python package in `~/.local/lib/python3.14/site-packages/caelestia` (symlinked to `lunar-cli/src/caelestia`).
+The AUR packages (`caelestia-shell`, `caelestia-cli`) have been removed and replaced entirely with our system-installed `lunar-shell` build and `lunar-cli` setup.

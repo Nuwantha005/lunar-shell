@@ -1,145 +1,75 @@
-# Git Workflow — Upstream Merging
+# Git Workflow — Remotes & Upstream Merging
 
 ## Remote Setup (Per Repo)
 
-After GitHub forks are created:
+Each of the three repos has two remotes configured:
 
 ```
-origin   → https://github.com/Nuwantha005/lunar-shell.git  (YOUR fork)
-upstream → https://github.com/caelestia-dots/shell.git     (original)
+origin   → https://github.com/Nuwantha005/lunar-<name>.git  (YOUR GitHub fork)
+upstream → original repository (caelestia-dots/shell, caelestia-dots/cli, Darkkal44/qylock)
 ```
+
+Verify in any repo:
+```bash
+git remote -v
+```
+
+---
 
 ## Pulling Upstream Changes
 
+Upstream changes can be pulled selectively (preferred) or via full merge:
+
 ```bash
-# 1. Fetch what upstream has (does NOT change your files)
+# 1. Fetch upstream changes (does NOT modify local working tree)
 git fetch upstream
 
-# 2. See what's new
-git log upstream/main --oneline --since="1 week ago"
-git log HEAD..upstream/main --oneline   # commits you don't have yet
+# 2. Inspect new commits
+git log HEAD..upstream/main --oneline
 
-# 3a. Cherry-pick a specific commit (selective — preferred)
-git cherry-pick abc1234   # just that one fix
+# 3a. Cherry-pick specific commits (selective — recommended)
+git cherry-pick <commit-hash>
 
-# 3b. Merge all upstream changes (careful — may conflict with our customizations)
+# 3b. Or merge full upstream branch
 git merge upstream/main
 
-# 4. Resolve conflicts (if any) — our custom files won't exist in upstream, so low risk
-# Key files we MODIFY that upstream also touches:
-#   - modules/lock/Lock.qml     ← we change this
-#   - services/Wallpapers.qml   ← we change this
-#   - services/Colours.qml      ← we may change this
-# If upstream touches these, resolve manually.
-
-# 5. Push to our fork
+# 4. Push to your fork
 git push origin main
 ```
 
-## .gitignore Strategy for .agent/
+---
 
-The `.agent/` folder IS tracked in our fork. It only exists in our fork — upstream
-Caelestia doesn't have it, so upstream merges will NEVER conflict on `.agent/`.
+## `.agent/` Documentation Folder
 
-This means:
-- `.agent/` is version-controlled and backed up to GitHub ✓
-- Future AI sessions can read `.agent/` from the repo ✓
-- Upstream merges don't interfere ✓
+The `.agent/` folder is located at `lunar-shell/.agent/` and is **tracked in git** inside `lunar-shell`.
 
-No `.gitignore` entry needed for `.agent/` — let it be tracked.
+- It only exists in your fork (`Nuwantha005/lunar-shell`), so upstream merges will **never** create conflicts in `.agent/`.
+- Future AI agent runs can clone `lunar-shell` and immediately read the architectural context.
 
-## What NOT to Merge from Upstream
+---
 
-These files are modified by us. Review carefully before accepting upstream changes:
+## `lunar-lock` Integration (Relative Symlink)
 
-### lunar-shell
-- `modules/lock/Lock.qml` — we add Qylock dispatch
-- `services/Wallpapers.qml` — we modify for theme-scoped picking
-- `shell.qml` — we may add modules and disable others
-
-### lunar-cli
-- `src/caelestia/utils/wallpaper.py` — we add theme-awareness
-- `src/caelestia/utils/theme.py` — we add pywal bridge call
-- `src/caelestia/parser.py` — we add theme + lock subcommands
-
-### Strategy: Topic Branches
-
-For big upstream merges, use a topic branch:
-```bash
-git checkout -b merge-upstream-v2.3
-git merge upstream/main
-# Resolve conflicts
-# Test thoroughly
-git checkout main
-git merge merge-upstream-v2.3
-git branch -d merge-upstream-v2.3
-```
-
-## lunar-lock as Git Submodule (Recommended)
-
-Instead of embedding Qylock themes by copy, use a submodule:
+Instead of using git submodules, `lunar-shell` accesses Qylock lock themes via a local relative symlink:
 
 ```bash
-# In lunar-shell:
-cd /home/nuwa/work-linux/projects/arch/shell/lunar-shell
-git submodule add https://github.com/Nuwantha005/lunar-lock.git lock-themes
-git commit -m "feat: add lunar-lock as lock-themes submodule"
+cd ~/work-linux/projects/arch/shell/lunar-shell
+ln -sf ../lunar-lock/themes lock-themes
 ```
 
-Then when cloning fresh:
-```bash
-git clone --recurse-submodules https://github.com/Nuwantha005/lunar-shell.git
-```
+- `lock-themes` is listed in `lunar-shell/.gitignore`.
+- Both `lunar-shell` and `lunar-lock` remain independent git repos.
+- Modifying themes in `lunar-lock/` reflects immediately in `lunar-shell/lock-themes/`.
 
-Updating Qylock themes from upstream:
-```bash
-cd lock-themes
-git fetch upstream
-git merge upstream/main   # get new Qylock themes
-cd ..
-git add lock-themes
-git commit -m "chore: update lunar-lock to latest"
-```
+---
 
 ## Repo Relationships Diagram
 
 ```
-caelestia-dots/shell ──(fork)──→ Nuwantha005/lunar-shell
-        ↑                                  ↓
-   upstream remote                    origin remote
+caelestia-dots/shell ──(fork)──→ Nuwantha005/lunar-shell  [includes .agent/]
         │                                  │
-        └──── git fetch upstream ──────────┘
-              git cherry-pick <hash>
+        └──── git fetch upstream ──────────┘ (cherry-pick/merge)
 
-caelestia-dots/cli ──(fork)──→ Nuwantha005/lunar-cli
-Darkkal44/qylock   ──(fork)──→ Nuwantha005/lunar-lock (used as submodule in lunar-shell)
+caelestia-dots/cli   ──(fork)──→ Nuwantha005/lunar-cli
+Darkkal44/qylock     ──(fork)──→ Nuwantha005/lunar-lock ──(symlink)──> lunar-shell/lock-themes
 ```
-
-## GitHub Fork Setup Steps
-
-1. Go to https://github.com/caelestia-dots/shell → "Fork" → fork to your account as `lunar-shell`
-2. Go to https://github.com/caelestia-dots/cli → "Fork" → fork as `lunar-cli`
-3. Go to https://github.com/Darkkal44/qylock → "Fork" → fork as `lunar-lock`
-
-Then locally:
-```bash
-cd /home/nuwa/work-linux/projects/arch/shell/lunar-shell
-git remote add origin https://github.com/Nuwantha005/lunar-shell.git
-git push -u origin main
-
-cd ../lunar-cli
-git remote add origin https://github.com/Nuwantha005/lunar-cli.git
-git push -u origin main
-
-cd ../lunar-lock
-git remote add origin https://github.com/Nuwantha005/lunar-lock.git
-git push -u origin main
-```
-
-Note: The `.agent/` folder at `/home/nuwa/work-linux/projects/arch/shell/.agent/` is NOT inside
-any of the three repos — it's at the parent `shell/` directory level. It won't be pushed
-to any GitHub repo automatically. To version-control it, either:
-1. Init a separate `shell-config` repo in the `shell/` directory itself
-2. Add it to one of the repos (e.g., `lunar-shell/.agent/`)
-
-Recommendation: Move `.agent/` inside `lunar-shell/.agent/` and track it there.
