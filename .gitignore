@@ -4,3 +4,5 @@
 build/
 .cache/
 logs
+# Qylock themes — local symlink to ../lunar-lock/themes/ (set up manually)
+lock-themes
