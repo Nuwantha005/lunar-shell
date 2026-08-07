@@ -83,6 +83,20 @@ Item {
         Keys.onUpPressed: list.currentList?.decrementCurrentIndex()
         Keys.onDownPressed: list.currentList?.incrementCurrentIndex()
 
+        Keys.onLeftPressed: event => {
+            if (list.showWallpapers) {
+                list.currentList?.decrementCurrentIndex();
+                event.accepted = true;
+            }
+        }
+
+        Keys.onRightPressed: event => {
+            if (list.showWallpapers) {
+                list.currentList?.incrementCurrentIndex();
+                event.accepted = true;
+            }
+        }
+
         Keys.onEscapePressed: {
             if (list.showWallpapers && list.currentList) {
                 list.currentList.wasCancelled = true;
@@ -95,10 +109,10 @@ Item {
                 return;
 
             if (event.modifiers & Qt.ControlModifier) {
-                if (event.key === Qt.Key_J || event.key === Qt.Key_N) {
+                if (event.key === Qt.Key_J || event.key === Qt.Key_N || (list.showWallpapers && event.key === Qt.Key_L)) {
                     list.currentList?.incrementCurrentIndex();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_K || event.key === Qt.Key_P) {
+                } else if (event.key === Qt.Key_K || event.key === Qt.Key_P || (list.showWallpapers && event.key === Qt.Key_H)) {
                     list.currentList?.decrementCurrentIndex();
                     event.accepted = true;
                 }
