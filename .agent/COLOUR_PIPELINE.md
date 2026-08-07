@@ -3,11 +3,26 @@
 ## Overview
 
 M3 (Material You) colours extracted by `materialyoucolor` are funnelled to:
-1. **QuickShell UI** — via `scheme.json` (existing Caelestia mechanism)
-2. **Hyprland** — via `~/.config/hypr/scheme/current.lua` (existing)
-3. **GTK / Qt** — via CSS templates (existing)
-4. **Terminals** — via ANSI sequences to /dev/pts/* (existing)
-5. **Firefox** — via pywalfox (NEW — see below)
+1. **QuickShell UI** — via `scheme.json` & QML `Colours.qml` singleton
+2. **Hyprland** — via `~/.config/hypr/scheme/current.lua`
+3. **GTK / Qt** — via CSS templates (`gtk.css`, `thunar.css`, `qtengine.colors`)
+4. **Terminals** — via ANSI sequences to `/dev/pts/*`
+5. **Firefox** — via pywalfox (`pywal_bridge.py`)
+
+### Live Carousel Preview Pipeline
+
+During launcher carousel navigation (`>wallpaper` / `>theme`):
+1. **QML** calls `caelestia wallpaper -p <image>` for the active item.
+2. **lunar-cli** extracts dynamic M3 colours and live-applies:
+   - **Terminals**: Sends ANSI escape sequences to `/dev/pts/*` (`apply_terms`), updating Kitty/Alacritty/Foot live on hover.
+   - **GTK Apps**: Writes `gtk-3.0/gtk.css` and `gtk-4.0/gtk.css` (`apply_gtk`), live-reloading Thunar/GTK UI colors on hover.
+   - **QML Shell**: Returns JSON palette to QML `Colours.qml` (`showPreview = true`).
+3. **Exit / Cancel Preview**: `stopPreview()` in `Wallpapers.qml` triggers `caelestia scheme restore` to revert terminals and GTK apps back to the active saved scheme.
+4. **Apply Selection**: `set_wallpaper` saves the new scheme permanently to `scheme.json` and runs full `apply_colours` and user `postHook` (`wal`, `pywalfox`, etc.).
+
+### QML Preview Lock Fix
+
+`Colours.qml` listens to `Wallpapers.previewColourLock`. When `previewColourLock` becomes `false` (after wallpaper write completes), a `Connections` handler forces `root.reload()` to guarantee the newly saved `scheme.json` is never missed due to asynchronous file watcher timing.
 
 ## The Dynamic Scheme Problem & Fix
 

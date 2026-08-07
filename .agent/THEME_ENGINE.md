@@ -72,12 +72,13 @@ def set_theme(name: str) -> None:
     """
     Full theme application pipeline:
     1. load_theme_definition(name)
-    2. Resolve wallpaper: selectedWallpaper if set, else first in wallpapers/
-    3. Call set_wallpaper(wall) — triggers colour pipeline
+    2. Save theme state FIRST & update active scheme.json (name & flavour) immediately
+       so dynamic colour pipeline works correctly.
+    3. Resolve wallpaper: selectedWallpaper if set, else first in wallpapers/
+    4. Call set_wallpaper(wall) — triggers colour pipeline
        (scheme.json will be updated with dynamic colours from this wallpaper)
-    4. Resolve pfp: selectedPfp if set, else first in pfp/
-    5. Copy pfp → ~/.local/state/caelestia/pfp.jpg (symlink)
-    6. Save theme state → ~/.local/state/caelestia/theme.json
+    5. Resolve pfp: selectedPfp if set, else first in pfp/
+    6. Symlink pfp → ~/.local/state/caelestia/pfp.jpg
     7. Notify: notify-send "Theme applied" "Switched to {name}"
     """
 
