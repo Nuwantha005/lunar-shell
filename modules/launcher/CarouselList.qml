@@ -67,6 +67,8 @@ PathView {
         }
     }
 
+    // pfpModel removed
+
     model: ScriptModel {
         id: scriptModel
 
@@ -92,18 +94,12 @@ PathView {
                 }
                 return res;
             } else if (root.carouselType === "pfp") {
-                const list = Theme.themePfps || [];
-                const res = [];
-                for (const p of list) {
-                    if (!q || p.name.toLowerCase().includes(q)) {
-                        res.push({
-                            displayName: p.name,
-                            imagePath: p.path,
-                            path: p.path
-                        });
-                    }
-                }
-                return res;
+                const list = Theme.queryPfp(q);
+                return list.map(p => ({
+                    displayName: p.name || p.relativePath || "Unknown",
+                    imagePath: p.path,
+                    path: p.path
+                }));
             } else {
                 // "wallpaper" or "lock"
                 const list = Wallpapers.query(q);
@@ -119,6 +115,10 @@ PathView {
             if (root.carouselType === "theme") {
                 const idx = values.findIndex(v => v.themeName === Theme.currentTheme);
                 root.currentIndex = idx >= 0 ? idx : 0;
+            } else if (root.carouselType === "pfp") {
+                const selectedPfpPath = Theme.themeData?.selectedPfp ? `${Theme.themePath}/${Theme.themeData.selectedPfp}` : "";
+                const idx = values.findIndex(v => v.path === selectedPfpPath);
+                root.currentIndex = idx >= 0 ? idx : 0;
             } else {
                 const idx = values.findIndex(v => v.path === Wallpapers.actualCurrent);
                 root.currentIndex = idx >= 0 ? idx : 0;
@@ -129,6 +129,10 @@ PathView {
     Component.onCompleted: {
         if (root.carouselType === "theme") {
             const idx = scriptModel.values.findIndex(v => v.themeName === Theme.currentTheme);
+            currentIndex = idx >= 0 ? idx : 0;
+        } else if (root.carouselType === "pfp") {
+            const selectedPfpPath = Theme.themeData?.selectedPfp ? `${Theme.themePath}/${Theme.themeData.selectedPfp}` : "";
+            const idx = scriptModel.values.findIndex(v => v.path === selectedPfpPath);
             currentIndex = idx >= 0 ? idx : 0;
         } else {
             const idx = scriptModel.values.findIndex(v => v.path === Wallpapers.actualCurrent);

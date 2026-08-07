@@ -27,7 +27,15 @@ Singleton {
         filter: FileSystemModel.Images
     }
 
-    readonly property list<var> themePfps: pfpsModel.entries
+    Searcher {
+        id: pfpsSearcher
+        list: pfpsModel.entries
+        key: "name"
+    }
+
+    function queryPfp(search: string): var {
+        return pfpsSearcher.query(search);
+    }
 
     function setTheme(name: string): void {
         Quickshell.execDetached(["caelestia", "theme", "set", name]);
