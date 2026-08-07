@@ -21,6 +21,14 @@ Singleton {
     property list<var> themesList: []
 
     FileSystemModel {
+        id: themesDirModel
+
+        path: `${Paths.home}/Pictures/themes`
+        filter: FileSystemModel.Directories
+        onEntriesChanged: root.refreshThemeList()
+    }
+
+    FileSystemModel {
         id: pfpsModel
 
         path: root.themePath ? `${root.themePath}/pfp` : ""

@@ -17,6 +17,8 @@ PageBase {
     title: qsTr("Themes")
     isSubPage: true
 
+    Component.onCompleted: Theme.refreshThemeList()
+
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top

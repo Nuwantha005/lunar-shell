@@ -128,6 +128,7 @@ PathView {
 
     Component.onCompleted: {
         if (root.carouselType === "theme") {
+            Theme.refreshThemeList();
             const idx = scriptModel.values.findIndex(v => v.themeName === Theme.currentTheme);
             currentIndex = idx >= 0 ? idx : 0;
         } else if (root.carouselType === "pfp") {

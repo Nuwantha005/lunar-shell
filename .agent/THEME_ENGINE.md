@@ -138,6 +138,7 @@ Singleton {
         }
     }
 
+    FileSystemModel { id: themesDirModel; path: Paths.home + "/Pictures/themes"; filter: FileSystemModel.Directories; onEntriesChanged: root.refreshThemeList() }
     FileSystemModel { id: wallpapersModel; path: root.themePath + "/wallpapers"; filter: FileSystemModel.Images }
     FileSystemModel { id: pfpsModel; path: root.themePath + "/pfp"; filter: FileSystemModel.Images }
     
