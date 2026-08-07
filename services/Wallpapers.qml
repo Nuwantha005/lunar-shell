@@ -22,20 +22,30 @@ Searcher {
     property bool previewColourLock
     property bool pendingPreviewClear
 
+    readonly property string wallDir: Theme.themePath ? `${Theme.themePath}/wallpapers` : Paths.wallsdir
+
     function getCategoryFor(w: FileSystemEntry): string {
-        let category = w.parentDir.slice(Paths.wallsdir.length + 1);
+        let category = w.parentDir.slice(root.wallDir.length + 1);
         if (category.includes("/"))
             category = category.slice(0, category.indexOf("/"));
         return category;
     }
 
     function setRandom(): void {
-        Quickshell.execDetached(["caelestia", "wallpaper", "-r", ...smartArg]);
+        if (Theme.currentTheme) {
+            Theme.randomWallpaper();
+        } else {
+            Quickshell.execDetached(["caelestia", "wallpaper", "-r", ...smartArg]);
+        }
     }
 
     function setWallpaper(path: string): void {
         actualCurrent = path;
-        Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
+        if (Theme.currentTheme) {
+            Theme.setWallpaper(path);
+        } else {
+            Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
+        }
     }
 
     function preview(path: string): void {
@@ -107,7 +117,7 @@ Searcher {
         id: wallpapers
 
         recursive: true
-        path: Paths.wallsdir
+        path: root.wallDir
         filter: FileSystemModel.Images
     }
 

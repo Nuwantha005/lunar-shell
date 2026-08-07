@@ -100,7 +100,7 @@ PageBase {
 
                 model: {
                     const walls = Wallpapers.list;
-                    const baseDir = Paths.wallsdir;
+                    const baseDir = Wallpapers.wallDir;
                     const categories = {};
                     const list = [];
                     for (const w of walls) {
@@ -131,14 +131,14 @@ PageBase {
                         if (!modelData)
                             return "";
 
-                        if (modelData.parentDir !== Paths.wallsdir) {
+                        if (modelData.parentDir !== Wallpapers.wallDir) {
                             const category = Wallpapers.getCategoryFor(modelData);
                             return category.slice(0, 1).toUpperCase() + category.slice(1);
                         }
                         return modelData.name;
                     }
                     onClicked: {
-                        if (modelData.parentDir !== Paths.wallsdir) {
+                        if (modelData.parentDir !== Wallpapers.wallDir) {
                             root.nState.selectedWallpaperCategory = Wallpapers.getCategoryFor(modelData);
                             root.nState.openSubPage(2); // Category page
                         } else {
