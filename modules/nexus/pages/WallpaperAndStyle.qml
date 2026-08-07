@@ -145,6 +145,18 @@ PageBase {
             spacing: Tokens.spacing.small
 
             IconTextButton {
+                icon: "palette"
+                text: qsTr("Themes")
+                font: Tokens.font.body.large
+                isRound: true
+                shapeMorph: true
+                type: IconTextButton.Tonal
+                horizontalPadding: Tokens.padding.extraLarge
+                verticalPadding: Tokens.padding.medium
+                onClicked: root.nState.openSubPage(4) // Themes page
+            }
+
+            IconTextButton {
                 icon: "wallpaper"
                 text: qsTr("Wallpapers")
                 font: Tokens.font.body.large
@@ -158,7 +170,7 @@ PageBase {
             }
 
             IconTextButton {
-                icon: "palette"
+                icon: "style"
                 text: qsTr("Colours")
                 font: Tokens.font.body.large
                 isRound: true
