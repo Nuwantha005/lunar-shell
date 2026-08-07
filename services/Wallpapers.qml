@@ -62,6 +62,8 @@ Searcher {
             pendingPreviewClear = true;
         else
             Colours.showPreview = false;
+
+        Quickshell.execDetached(["caelestia", "scheme", "restore"]);
     }
 
     onPreviewColourLockChanged: {
