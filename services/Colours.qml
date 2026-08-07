@@ -82,6 +82,15 @@ Singleton {
         Quickshell.execDetached(["caelestia", "scheme", "set", "--notify", "-m", mode]);
     }
 
+    Connections {
+        target: Wallpapers
+        function onPreviewColourLockChanged() {
+            if (!Wallpapers.previewColourLock) {
+                root.reload();
+            }
+        }
+    }
+
     function reloadHyprRules(): void {
         let rule, trEnabled;
         if (Hypr.usingLua) {
