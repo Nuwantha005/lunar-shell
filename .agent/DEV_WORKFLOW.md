@@ -107,7 +107,7 @@ ln -sf ../lunar-lock/themes lock-themes
 
 ```bash
 # 1. Edit QML files in lunar-shell/
-vim ~/work-linux/projects/arch/shell/lunar-shell/modules/dashboard/WallpaperPicker.qml
+vim ~/work-linux/projects/arch/shell/lunar-shell/modules/launcher/CarouselList.qml
 
 # 2. Restart shell to load updated QML
 caelestia shell -d

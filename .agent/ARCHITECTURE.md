@@ -33,11 +33,13 @@ lunar-shell (QML via QuickShell)
         │   ├── Lock.qml         ← WlSessionLock wrapper (MODIFIED)
         │   ├── LockSurface.qml  ← Default caelestia lock UI
         │   └── QylockSurface.qml← (NEW) Embeds Qylock themes
-        └── dashboard/
-            ├── ThemePicker.qml  ← (NEW) Theme selection panel
-            ├── WallpaperPicker  ← (MODIFIED) Scoped to theme wallpapers
-            ├── PfpPicker.qml    ← (NEW) Profile picture picker
-            └── LockPicker.qml   ← (NEW) Lock backend + Qylock theme picker
+        ├── launcher/
+        │   ├── CarouselList.qml ← (NEW) Quick interactive launcher slider for wallpapers, themes, pfps, lock screens
+        │   ├── ContentList.qml  ← (MODIFIED) Routes autocomplete actions (>theme, >pfp, >lockscreen) to CarouselList
+        │   └── AppList.qml      ← (MODIFIED) Resolves launcher commands to autocomplete suggestions
+        └── nexus/pages/wallandstyle/
+            ├── ThemeSelect.qml  ← Full settings panel theme selection grid
+            └── WallpaperSelect.qml ← Scoped theme wallpaper selector grid
 ```
 
 ## Key Data Flow: Wallpaper → Colours
@@ -142,11 +144,14 @@ modules/
         Lock.qml            ← MODIFIED: dispatches to caelestia/qylock surface
         QylockSurface.qml   ← NEW: embeds Qylock themes + uses Caelestia PAM
 
-    dashboard/ (or wherever the wallpaper picker lives)
-        ThemePicker.qml     ← NEW
-        PfpPicker.qml       ← NEW
-        LockPicker.qml      ← NEW
-        (WallpaperPicker modified in-place)
+    launcher/
+        CarouselList.qml    ← NEW: Shared component for theme/pfp/wallpaper launcher sliders
+        ContentList.qml     ← MODIFIED: Handles >theme, >pfp, >lockscreen
+        AppList.qml         ← MODIFIED: Exposes launcher autocomplete actions
+
+    nexus/pages/wallandstyle/
+        ThemeSelect.qml     ← Full settings panel grid for theme selection
+        WallpaperSelect.qml ← Full settings panel grid for wallpaper selection
 
     utilities/              ← NEW panel group (Phase 6)
         ScreenshotTools.qml

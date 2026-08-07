@@ -139,9 +139,11 @@ Singleton {
 
     FileSystemModel { id: wallpapersModel; path: root.themePath + "/wallpapers"; filter: FileSystemModel.Images }
     FileSystemModel { id: pfpsModel; path: root.themePath + "/pfp"; filter: FileSystemModel.Images }
+    
+    Searcher { id: pfpsSearcher; list: pfpsModel.entries; key: "name" }
 
     readonly property var themeWallpapers: wallpapersModel.entries
-    readonly property var themePfps: pfpsModel.entries
+    function queryPfp(search) { return pfpsSearcher.query(search); }
 
     function setTheme(name) { Quickshell.execDetached(["caelestia", "theme", "set", name]); }
     function setWallpaper(path) { Quickshell.execDetached(["caelestia", "theme", "wallpaper", "set", path]); }
@@ -150,27 +152,29 @@ Singleton {
 }
 ```
 
-## Shell: ThemePicker.qml Panel
+## Shell UI Options for Theme & Asset Selection
 
-Location: `lunar-shell/modules/dashboard/ThemePicker.qml`
+Theme switching and asset pickers are accessible via two distinct UI interfaces:
+
+### Option A: Launcher Carousel (CarouselList.qml)
+
+Location: `lunar-shell/modules/launcher/CarouselList.qml`
 
 UI design:
-- Grid of theme cards (2-3 columns)
-- Each card shows: first wallpaper as thumbnail, theme name overlay
-- Active theme has a highlighted border (using Colours.m3primary)
-- Clicking calls `Theme.setTheme(name)` and closes panel
-- Integrated into the same panel/drawer as the existing wallpaper picker
+- Quick horizontal sliding carousel (PathView) for fast keyboard-driven selection of Themes, Profile Pictures, Wallpapers, and Lockscreen backgrounds.
+- Triggered by typing `>theme`, `>pfp`, `>wallpaper`, or `>lockscreen` in the launcher.
+- Fully supports Vim-style (`h`/`l`) and Arrow key navigation.
+- Preserves theme preview states cleanly and executes selections on `Enter`.
 
-## Shell: WallpaperPicker Modification
+### Option B: Nexus Settings Panel (ThemeSelect.qml & WallpaperSelect.qml)
 
-Location: `lunar-shell/modules/dashboard/` (find existing wallpaper picker)
+Location: `lunar-shell/modules/nexus/pages/wallandstyle/ThemeSelect.qml`
 
-Modification:
-- Add a mode toggle: "Theme" / "All"
-- In "Theme" mode: show `Theme.themeWallpapers` (from current theme's wallpapers/)
-- In "All" mode: show `Wallpapers.list` (original global wallpapers from ~/Pictures/Wallpapers)
-- Clicking in "Theme" mode: calls `Theme.setWallpaper(path)` (updates theme.json too)
-- Clicking in "All" mode: calls `Wallpapers.setWallpaper(path)` (original behaviour)
+UI design:
+- Full grid layout embedded inside the Nexus Settings panel (under Wallpaper & Style).
+- Displays visual cards of all themes available in `~/Pictures/themes/`.
+- Shows active theme badge and wallpaper preview thumbnails.
+- Allows browsing featured and local theme wallpapers in a multi-column grid (`WallpaperSelect.qml`).
 
 ## Migration from Old Themes
 

@@ -46,6 +46,7 @@ This is NOT intended to be a public-facing project — it's a personalized deskt
 - [x] `lunar-lock` connected via `lock-themes` symlink
 - [x] Theme engine implementation (Phase 2)
 - [x] Dynamic colour persistence & Pywalfox bridge (Phase 3)
+- [x] Launcher Carousel (Unified picker for Theme, Pfp, Wallpaper, Lockscreen)
 - [ ] Lock screen integration (Phase 4)
 - [ ] Custom widgets (Phase 6)
 
