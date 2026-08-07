@@ -20,6 +20,15 @@ Singleton {
     property var themeData: ({})
     property list<var> themesList: []
 
+    FileSystemModel {
+        id: pfpsModel
+
+        path: root.themePath ? `${root.themePath}/pfp` : ""
+        filter: FileSystemModel.Images
+    }
+
+    readonly property list<var> themePfps: pfpsModel.entries
+
     function setTheme(name: string): void {
         Quickshell.execDetached(["caelestia", "theme", "set", name]);
     }

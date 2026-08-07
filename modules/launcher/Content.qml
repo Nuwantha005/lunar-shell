@@ -61,18 +61,26 @@ Item {
         placeholderText: qsTr("Type \"%1\" for commands").arg(GlobalConfig.launcher.actionPrefix)
 
         onAccepted: {
+            if (text === "") {
+                root.screenState.launcher = false;
+                return;
+            }
+
+            if (list.showWallpapers) {
+                list.currentList?.selectCurrent();
+                root.screenState.launcher = false;
+                return;
+            }
+
             const currentItem = list.currentList?.currentItem;
             if (currentItem) {
-                if (list.showWallpapers) {
-                    if (Colours.scheme === "dynamic" && currentItem.modelData.path !== Wallpapers.actualCurrent)
-                        Wallpapers.previewColourLock = true;
-                    Wallpapers.setWallpaper(currentItem.modelData.path);
+                if (text.startsWith("=")) {
                     root.screenState.launcher = false;
                 } else if (text.startsWith(GlobalConfig.launcher.actionPrefix)) {
                     if (text.startsWith(`${GlobalConfig.launcher.actionPrefix}calc `))
                         currentItem.onClicked();
                     else
-                        currentItem.modelData.onClicked(list.currentList);
+                        currentItem.modelData?.onClicked?.(list.currentList);
                 } else {
                     Apps.launch(currentItem.modelData);
                     root.screenState.launcher = false;

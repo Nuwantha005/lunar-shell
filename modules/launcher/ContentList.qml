@@ -18,9 +18,17 @@ Item {
     required property int padding
     required property int rounding
 
-    readonly property bool showWallpapers: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
-    readonly property var currentList: showWallpapers ? wallpaperList.item : appList.item // Can be either ListView or PathView, so can't type properly
-    property string animState: showWallpapers ? "wallpapers" : "apps"
+    readonly property string actionPrefix: GlobalConfig.launcher.actionPrefix
+    readonly property string searchCmd: {
+        if (!search.text.startsWith(actionPrefix)) return "";
+        const parts = search.text.slice(actionPrefix.length).trim().split(" ");
+        return parts[0].toLowerCase();
+    }
+    readonly property bool showCarousel: ["wallpaper", "theme", "pfp", "lock", "lockscreen"].includes(searchCmd)
+    readonly property string carouselType: showCarousel ? (searchCmd === "lockscreen" ? "lock" : searchCmd) : ""
+    readonly property bool showWallpapers: showCarousel
+    readonly property var currentList: showCarousel ? carouselList.item : appList.item // Can be either ListView or PathView, so can't type properly
+    property string animState: showCarousel ? "wallpapers" : "apps"
 
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: parent.bottom
@@ -47,9 +55,9 @@ Item {
             name: "wallpapers"
 
             PropertyChanges {
-                root.implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, wallpaperList.implicitWidth)
+                root.implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, carouselList.implicitWidth)
                 root.implicitHeight: root.Tokens.sizes.launcher.wallpaperHeight
-                wallpaperList.active: true
+                carouselList.active: true
             }
         }
     ]
@@ -90,7 +98,7 @@ Item {
     }
 
     Loader {
-        id: wallpaperList
+        id: carouselList
 
         asynchronous: true
         active: false
@@ -99,13 +107,14 @@ Item {
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
 
-        sourceComponent: WallpaperList {
-            objectName: "launcherWallpaperList"
+        sourceComponent: CarouselList {
+            objectName: "launcherCarouselList"
 
             search: root.search
             screenState: root.screenState
             panels: root.panels
             content: root.content
+            carouselType: root.carouselType
         }
     }
 
