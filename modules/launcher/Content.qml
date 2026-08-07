@@ -83,7 +83,12 @@ Item {
         Keys.onUpPressed: list.currentList?.decrementCurrentIndex()
         Keys.onDownPressed: list.currentList?.incrementCurrentIndex()
 
-        Keys.onEscapePressed: root.screenState.launcher = false
+        Keys.onEscapePressed: {
+            if (list.showWallpapers && list.currentList) {
+                list.currentList.wasCancelled = true;
+            }
+            root.screenState.launcher = false;
+        }
 
         Keys.onPressed: event => {
             if (!GlobalConfig.launcher.vimKeybinds)

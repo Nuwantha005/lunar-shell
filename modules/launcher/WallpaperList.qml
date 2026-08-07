@@ -53,8 +53,25 @@ PathView {
         onValuesChanged: root.currentIndex = search ? 0 : values.findIndex(w => w.path === Wallpapers.actualCurrent)
     }
 
+    property bool wasCancelled: false
+
     Component.onCompleted: currentIndex = Wallpapers.list.findIndex(w => w.path === Wallpapers.actualCurrent)
-    Component.onDestruction: Wallpapers.stopPreview()
+    Component.onDestruction: {
+        if (wasCancelled) {
+            Wallpapers.stopPreview();
+        } else if (currentItem && Wallpapers.showPreview) {
+            const item = currentItem as WallpaperItem;
+            if (item && item.modelData && item.modelData.path) {
+                if (Colours.scheme === "dynamic" && item.modelData.path !== Wallpapers.actualCurrent)
+                    Wallpapers.previewColourLock = true;
+                Wallpapers.setWallpaper(item.modelData.path);
+            } else {
+                Wallpapers.stopPreview();
+            }
+        } else {
+            Wallpapers.stopPreview();
+        }
+    }
 
     onCurrentItemChanged: {
         if (currentItem)
@@ -92,6 +109,19 @@ PathView {
         PathLine {
             x: root.width
             relativeY: 0
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton
+
+        onWheel: wheel => {
+            if (wheel.angleDelta.y > 0 || wheel.angleDelta.x < 0) {
+                root.decrementCurrentIndex();
+            } else if (wheel.angleDelta.y < 0 || wheel.angleDelta.x > 0) {
+                root.incrementCurrentIndex();
+            }
         }
     }
 }
