@@ -62,6 +62,24 @@ class LauncherConfig : public ConfigObject {
                 { u"command"_s, QStringList{ u"autocomplete"_s, u"wallpaper"_s } },
             }),
             vmap({
+                { u"name"_s, u"Theme"_s },
+                { u"icon"_s, u"palette"_s },
+                { u"description"_s, u"Switch to a different theme"_s },
+                { u"command"_s, QStringList{ u"autocomplete"_s, u"theme"_s } },
+            }),
+            vmap({
+                { u"name"_s, u"Profile Picture"_s },
+                { u"icon"_s, u"account_circle"_s },
+                { u"description"_s, u"Change your profile picture"_s },
+                { u"command"_s, QStringList{ u"autocomplete"_s, u"pfp"_s } },
+            }),
+            vmap({
+                { u"name"_s, u"Lockscreen Wallpaper"_s },
+                { u"icon"_s, u"screen_lock_portrait"_s },
+                { u"description"_s, u"Change lock screen wallpaper"_s },
+                { u"command"_s, QStringList{ u"autocomplete"_s, u"lockscreen"_s } },
+            }),
+            vmap({
                 { u"name"_s, u"Variant"_s },
                 { u"icon"_s, u"colors"_s },
                 { u"description"_s, u"Change the current scheme variant"_s },

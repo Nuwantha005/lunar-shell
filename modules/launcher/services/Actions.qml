@@ -21,7 +21,39 @@ Searcher {
     Variants {
         id: variants
 
-        model: GlobalConfig.launcher.actions.filter(a => (a.enabled ?? true) && (GlobalConfig.launcher.enableDangerousActions || !(a.dangerous ?? false)))
+        model: {
+            const rawActions = GlobalConfig.launcher.actions || [];
+            const hasTheme = rawActions.some(a => a.name === "Theme" || (a.command && a.command[1] === "theme"));
+            const hasPfp = rawActions.some(a => a.name === "Profile Picture" || (a.command && a.command[1] === "pfp"));
+            const hasLock = rawActions.some(a => a.name === "Lockscreen Wallpaper" || (a.command && a.command[1] === "lockscreen"));
+
+            const actions = [...rawActions];
+            if (!hasTheme) {
+                actions.push({
+                    name: "Theme",
+                    icon: "palette",
+                    description: "Switch to a different theme",
+                    command: ["autocomplete", "theme"]
+                });
+            }
+            if (!hasPfp) {
+                actions.push({
+                    name: "Profile Picture",
+                    icon: "account_circle",
+                    description: "Change your profile picture",
+                    command: ["autocomplete", "pfp"]
+                });
+            }
+            if (!hasLock) {
+                actions.push({
+                    name: "Lockscreen Wallpaper",
+                    icon: "screen_lock_portrait",
+                    description: "Change lock screen wallpaper",
+                    command: ["autocomplete", "lockscreen"]
+                });
+            }
+            return actions.filter(a => (a.enabled ?? true) && (GlobalConfig.launcher.enableDangerousActions || !(a.dangerous ?? false)));
+        }
 
         Action {}
     }
