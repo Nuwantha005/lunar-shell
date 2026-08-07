@@ -44,8 +44,8 @@ This is NOT intended to be a public-facing project — it's a personalized deskt
 - [x] `VERSION 1.0` fix applied in `plugin/cmake/qml-module.cmake`
 - [x] `caelestia` CLI wrapper installed to `~/.local/bin/caelestia`
 - [x] `lunar-lock` connected via `lock-themes` symlink
-- [ ] Theme engine implementation (Phase 2)
-- [ ] Dynamic colour persistence fix (Phase 3)
+- [x] Theme engine implementation (Phase 2)
+- [x] Dynamic colour persistence & Pywalfox bridge (Phase 3)
 - [ ] Lock screen integration (Phase 4)
 - [ ] Custom widgets (Phase 6)
 
