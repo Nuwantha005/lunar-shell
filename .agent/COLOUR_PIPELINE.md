@@ -16,8 +16,9 @@ During launcher carousel navigation (`>wallpaper` / `>theme`):
 2. **lunar-cli** extracts dynamic M3 colours and live-applies:
    - **Terminals**: Sends ANSI escape sequences to `/dev/pts/*` (`apply_terms`), updating Kitty/Alacritty/Foot live on hover.
    - **GTK Apps**: Writes `gtk-3.0/gtk.css` and `gtk-4.0/gtk.css` (`apply_gtk`), live-reloading Thunar/GTK UI colors on hover.
+   - **Firefox**: Generates Pywal `colors.json` (`funnel_to_pywalfox`) and updates Pywalfox live on hover.
    - **QML Shell**: Returns JSON palette to QML `Colours.qml` (`showPreview = true`).
-3. **Exit / Cancel Preview**: `stopPreview()` in `Wallpapers.qml` triggers `caelestia scheme restore` to revert terminals and GTK apps back to the active saved scheme.
+3. **Exit / Cancel Preview**: `stopPreview()` in `Wallpapers.qml` triggers `caelestia scheme restore` to revert terminals, GTK apps, and Firefox back to the active saved scheme.
 4. **Apply Selection**: `set_wallpaper` saves the new scheme permanently to `scheme.json` and runs full `apply_colours` and user `postHook` (`wal`, `pywalfox`, etc.).
 
 ### QML Preview Lock Fix

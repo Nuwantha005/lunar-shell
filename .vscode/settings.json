@@ -1,6 +1,13 @@
 {
-    "editor.defaultFormatter": "theqtcompany.qt-qml",
-    "[cpp]": {
-        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
-    }
+  "editor.defaultFormatter": "theqtcompany.qt-qml",
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "qt-core.qtInstallationRoot": "/usr/lib/qt6",
+  "qt-qml.qmlls.additionalImportPaths": [
+    "/usr/lib/qt6/qml"
+  ]
 }
