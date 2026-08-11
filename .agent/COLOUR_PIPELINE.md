@@ -5,8 +5,8 @@
 M3 (Material You) colours extracted by `materialyoucolor` are funnelled to:
 1. **QuickShell UI** — via `scheme.json` & QML `Colours.qml` singleton
 2. **Hyprland** — via `~/.config/hypr/scheme/current.lua`
-3. **GTK / Qt** — via CSS templates (`gtk.css`, `thunar.css`, `qtengine.colors`)
-4. **Terminals** — via ANSI sequences to `/dev/pts/*`
+3. **GTK / Qt** — via CSS & QSS templates (`gtk.css`, `thunar.css`, `qtengine.colors`, `caelestia.qss`)
+4. **Terminals** — via `kitten @ --to=unix:... set-colors --all -c` (Kitty remote control IPC) & `sequences.txt`
 5. **Firefox** — via pywalfox (`pywal_bridge.py`)
 
 ### Live Carousel Preview Pipeline
@@ -14,12 +14,17 @@ M3 (Material You) colours extracted by `materialyoucolor` are funnelled to:
 During launcher carousel navigation (`>wallpaper` / `>theme`):
 1. **QML** calls `caelestia wallpaper -p <image>` for the active item.
 2. **lunar-cli** extracts dynamic M3 colours and live-applies:
-   - **Terminals**: Sends ANSI escape sequences to `/dev/pts/*` (`apply_terms`), updating Kitty/Alacritty/Foot live on hover.
-   - **GTK Apps**: Writes `gtk-3.0/gtk.css` and `gtk-4.0/gtk.css` (`apply_gtk`), live-reloading Thunar/GTK UI colors on hover.
-   - **Firefox**: Generates Pywal `colors.json` (`funnel_to_pywalfox`) and updates Pywalfox live on hover.
+   - **Terminals**: `apply_terms()` scans `$XDG_RUNTIME_DIR` and `/tmp` for all active Kitty sockets (`mykitty*`, `kitty*`) and executes `kitten @ --to=unix:<sock> set-colors --all -c ~/.local/state/caelestia/kitty-colors.conf`. Updates open and newly created Kitty windows live with zero PTY notification noise.
+   - **Qt / Dolphin**: `apply_qt()` updates `qtengine/caelestia.colors` & `caelestia.qss` (floating container cards, rounded borders, pill tabs) and sends DBus `org.kde.KGlobalSettings.notifyChange` signal to live-update Qt/KDE apps (like Dolphin) on hover.
+   - **Firefox**: `funnel_to_pywalfox()` generates Pywal `colors.json` (`color0` = `bg`, `color7/15` = `fg`) and updates Pywalfox live on hover.
    - **QML Shell**: Returns JSON palette to QML `Colours.qml` (`showPreview = true`).
-3. **Exit / Cancel Preview**: `stopPreview()` in `Wallpapers.qml` triggers `caelestia scheme restore` to revert terminals, GTK apps, and Firefox back to the active saved scheme.
-4. **Apply Selection**: `set_wallpaper` saves the new scheme permanently to `scheme.json` and runs full `apply_colours` and user `postHook` (`wal`, `pywalfox`, etc.).
+3. **Exit / Cancel Preview**: `stopPreview()` in `Wallpapers.qml` triggers `caelestia scheme restore` to revert terminals, Qt/Dolphin, and Firefox back to the active saved scheme.
+4. **Apply Selection**: `set_wallpaper` saves the new scheme permanently to `scheme.json`, executes full `apply_colours`, and sends a soundless low-urgency toast notification (`notify-send -u low`).
+
+### GTK3 vs Qt Live Reloading Notes
+
+- **GTK3 Apps (Thunar, etc.)**: GTK3's `GtkCssProvider` caches user stylesheets (`~/.config/gtk-3.0/gtk.css`) at startup or theme name change. User CSS overrides cannot be live-reloaded while GTK3 processes are running; new Thunar windows will inherit the updated CSS.
+- **Qt / KDE Apps (Dolphin, etc.)**: Support live color scheme re-parsing via `caelestia.colors`, `caelestia.qss`, and the `KGlobalSettings` DBus notification signal.
 
 ### QML Preview Lock Fix
 
