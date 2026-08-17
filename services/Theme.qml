@@ -17,6 +17,7 @@ Singleton {
     property string themePath: ""
     property string lockBackend: "caelestia"
     property string qylockTheme: ""
+    property string selectedLockWallpaper: ""
     property var themeData: ({})
     property list<var> themesList: []
 
@@ -53,6 +54,10 @@ Singleton {
         Quickshell.execDetached(["caelestia", "theme", "wallpaper", "set", path]);
     }
 
+    function setLockWallpaper(path: string): void {
+        Quickshell.execDetached(["caelestia", "lock", "--set-lock-wallpaper", path]);
+    }
+
     function setPfp(path: string): void {
         Quickshell.execDetached(["caelestia", "theme", "pfp", "set", path]);
     }
@@ -81,6 +86,7 @@ Singleton {
                 root.themePath = data.path ?? "";
                 root.lockBackend = data.lockBackend ?? "caelestia";
                 root.qylockTheme = data.qylockTheme ?? "";
+                root.selectedLockWallpaper = data.selectedLockWallpaper ?? "";
                 root.themeData = data;
             } catch (e) {
                 console.warn("Failed to parse theme.json:", e);

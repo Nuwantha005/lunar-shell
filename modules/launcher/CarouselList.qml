@@ -60,7 +60,9 @@ PathView {
             Theme.setTheme(data.themeName);
         } else if (root.carouselType === "pfp") {
             Theme.setPfp(data.path);
-        } else if (root.carouselType === "wallpaper" || root.carouselType === "lock") {
+        } else if (root.carouselType === "lock") {
+            Wallpapers.setLockWallpaper(data.path);
+        } else if (root.carouselType === "wallpaper") {
             if (Colours.scheme === "dynamic" && data.path !== Wallpapers.actualCurrent)
                 Wallpapers.previewColourLock = true;
             Wallpapers.setWallpaper(data.path);
@@ -119,6 +121,9 @@ PathView {
                 const selectedPfpPath = Theme.themeData?.selectedPfp ? `${Theme.themePath}/${Theme.themeData.selectedPfp}` : "";
                 const idx = values.findIndex(v => v.path === selectedPfpPath);
                 root.currentIndex = idx >= 0 ? idx : 0;
+            } else if (root.carouselType === "lock") {
+                const idx = values.findIndex(v => v.path === Wallpapers.lockWallpaper);
+                root.currentIndex = idx >= 0 ? idx : 0;
             } else {
                 const idx = values.findIndex(v => v.path === Wallpapers.actualCurrent);
                 root.currentIndex = idx >= 0 ? idx : 0;
@@ -134,6 +139,9 @@ PathView {
         } else if (root.carouselType === "pfp") {
             const selectedPfpPath = Theme.themeData?.selectedPfp ? `${Theme.themePath}/${Theme.themeData.selectedPfp}` : "";
             const idx = scriptModel.values.findIndex(v => v.path === selectedPfpPath);
+            currentIndex = idx >= 0 ? idx : 0;
+        } else if (root.carouselType === "lock") {
+            const idx = scriptModel.values.findIndex(v => v.path === Wallpapers.lockWallpaper);
             currentIndex = idx >= 0 ? idx : 0;
         } else {
             const idx = scriptModel.values.findIndex(v => v.path === Wallpapers.actualCurrent);
@@ -151,7 +159,7 @@ PathView {
     onCurrentItemChanged: {
         if (currentItem) {
             const data = (currentItem as CarouselItem).modelData;
-            if (data && data.imagePath && (root.carouselType === "wallpaper" || root.carouselType === "theme" || root.carouselType === "lock")) {
+            if (data && data.imagePath && (root.carouselType === "wallpaper" || root.carouselType === "theme")) {
                 Wallpapers.preview(data.imagePath);
             }
         }

@@ -188,7 +188,7 @@ WlSessionLockSurface {
         id: wallpaperBackground
 
         CachingImage {
-            path: Wallpapers.current
+            path: Wallpapers.lockWallpaper
         }
     }
 

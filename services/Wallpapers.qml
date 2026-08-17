@@ -94,6 +94,26 @@ Searcher {
         target: "wallpaper"
     }
 
+    function setLockWallpaper(path: string): void {
+        Theme.setLockWallpaper(path);
+    }
+
+    property string actualLockWallpaper: ""
+    readonly property string lockWallpaper: actualLockWallpaper !== "" ? actualLockWallpaper : actualCurrent
+
+    FileView {
+        path: `${Paths.state}/lock_override_bg`
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            root.actualLockWallpaper = text().trim();
+        }
+        onLoadFailed: {
+            root.actualLockWallpaper = "";
+        }
+    }
+
     FileView {
         path: root.currentNamePath
         watchChanges: true
