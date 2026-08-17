@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import qs.components.misc
+import qs.services
 
 Scope {
     property alias lock: lock
@@ -17,6 +18,16 @@ Scope {
         LockSurface {
             lock: lock
             pam: pam
+        }
+    }
+
+    Connections {
+        target: lock
+        function onLockedChanged(): void {
+            if (lock.locked && Theme.lockBackend === "hyprlock") {
+                lock.locked = false;
+                Quickshell.execDetached(["hyprlock"]);
+            }
         }
     }
 

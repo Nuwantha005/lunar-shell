@@ -6,7 +6,8 @@
 |---------|---------|-------|
 | `caelestia` | QuickShell IPC `caelestia lock` | Default. Uses WlSessionLock inside QuickShell process. |
 | `qylock` | Embedded in lunar-shell's Lock.qml | Deep integration — Qylock themes run inside the SAME QuickShell process. |
-| `hyprlock` | `hyprlock` binary | External. Reads ~/.config/hypr/hyprlock.conf (Caelestia manages this). |
+| `hyprlock` | `hyprlock` binary | External. locks unique to the themes. stored at `~/Pictures/themes/<theme-name>/hyprlock.conf` (Caelestia manages this). |
+
 
 ## State
 
@@ -20,7 +21,7 @@ Lock backend and Qylock theme are stored inside `theme.json`:
 }
 ```
 
-Exposed to QML via `Theme.qml` singleton (`Theme.lockBackend`, `Theme.qylockTheme`).
+Exposed to QML via `Theme.qml` singleton (`Theme.lockBackend`, `Theme.qylockTheme`). For hyprlock and phase 4b lock, we use the wallpaper image as the background.
 
 ## Deep Qylock Integration Architecture
 
@@ -41,6 +42,7 @@ The `lock_shell.qml`, `lock.sh`, and SDDM shim are NOT used.
 
 The `lunar-lock` repo is either:
 - A **git submodule** inside `lunar-shell/lock-themes/` → keeps themes updatable
+However, qylock is a massive 1.5 GB repo. Adding it as a submodule will drain network for no reason and consume storage as well. apart from that, I needed to maintain it as a fork, so i forked the original repo and placed it in `/home/nuwa/work-linux/projects/arch/shell/lunar-lock` folder. What we can do is either symlink it to inside of the lunar-shell or someone use the 2 modules independently. Need an evaluation on the options.
 - OR themes are copied directly into lunar-shell
 
 Recommended: **git submodule** at `lunar-shell/lock-themes` pointing to `lunar-lock`.
@@ -184,8 +186,9 @@ subprocess.run(["qs", "ipc", "call", "lock", "lock"], ...)
 A panel in the dashboard to configure lock settings:
 
 - Segmented: [Caelestia] [Qylock] [hyprlock]
-- When Qylock selected: scrollable grid of Qylock themes (37 available)
+- When Qylock selected: scrollable grid of Qylock themes (37 available) similar to how wallpapers or themes are shown in quick picker.Both caelestia and hyprlock locks are one per theme: meaning we don't need a seperate carousel type chooser for them, we only need it for qylock lock and phase 4b custom background thing.
   - Each shows theme preview image from `lock-themes/Assets/previews/<name>/`
+  qylock proivdes animated set of gifs (or videos) for each lock. For custom locks like hyprlock or caelestia lock, we might have to render them somehow.
   - Clicking a theme: calls `caelestia lock --set-theme <name>`
 - Apply immediately or just change setting
 

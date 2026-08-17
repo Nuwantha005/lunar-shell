@@ -192,6 +192,20 @@ WlSessionLockSurface {
         }
     }
 
+    Loader {
+        id: qylockLoader
+        anchors.fill: parent
+        active: Theme.lockBackend === "qylock"
+        visible: active
+        source: "QylockSurface.qml"
+        onLoaded: {
+            if (item) {
+                item.lock = root.lock;
+                item.pam = root.pam;
+            }
+        }
+    }
+
     Item {
         id: lockContent
 
@@ -202,7 +216,7 @@ WlSessionLockSurface {
         implicitWidth: size
         implicitHeight: size
 
-        visible: Config.lock.enabled
+        visible: Config.lock.enabled && Theme.lockBackend === "caelestia"
         rotation: 180
         scale: 0
 

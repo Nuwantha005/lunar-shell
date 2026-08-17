@@ -64,13 +64,33 @@ Item {
             fontStyle: Tokens.font.icon.builders.extraLarge.scale(2).weight(Font.DemiBold).build()
         }
 
-        CachingImage {
+        Loader {
             anchors.fill: parent
-            path: root.modelData?.imagePath ?? root.modelData?.path ?? ""
-            smooth: !(root.PathView.view as any)?.moving
-            sourceSize: {
-                const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
-                return Qt.size(image.implicitWidth * dpr, image.implicitHeight * dpr);
+            sourceComponent: (root.modelData?.imagePath ?? root.modelData?.path ?? "").endsWith(".gif") ? gifComp : imgComp
+        }
+
+        Component {
+            id: gifComp
+
+            AnimatedImage {
+                anchors.fill: parent
+                source: root.modelData?.imagePath ?? root.modelData?.path ?? ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+            }
+        }
+
+        Component {
+            id: imgComp
+
+            CachingImage {
+                anchors.fill: parent
+                path: root.modelData?.imagePath ?? root.modelData?.path ?? ""
+                smooth: !(root.PathView.view as any)?.moving
+                sourceSize: {
+                    const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
+                    return Qt.size(image.implicitWidth * dpr, image.implicitHeight * dpr);
+                }
             }
         }
     }

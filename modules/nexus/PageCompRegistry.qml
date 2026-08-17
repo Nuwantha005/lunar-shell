@@ -39,6 +39,9 @@ QtObject {
                 Component {
                     ThemeSelect {}
                 }
+                Component {
+                    LockPicker {}
+                }
             }
         },
 

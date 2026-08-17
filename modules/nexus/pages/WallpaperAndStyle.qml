@@ -180,6 +180,18 @@ PageBase {
                 verticalPadding: Tokens.padding.medium
                 onClicked: root.nState.openSubPage(3) // Colours page
             }
+
+            IconTextButton {
+                icon: "lock"
+                text: qsTr("Lock screen")
+                font: Tokens.font.body.large
+                isRound: true
+                shapeMorph: true
+                type: IconTextButton.Tonal
+                horizontalPadding: Tokens.padding.extraLarge
+                verticalPadding: Tokens.padding.medium
+                onClicked: root.nState.openSubPage(5) // Lock screen page
+            }
         }
 
         ToggleRow {

@@ -57,6 +57,14 @@ Singleton {
         Quickshell.execDetached(["caelestia", "theme", "pfp", "set", path]);
     }
 
+    function setLockBackend(backend: string): void {
+        Quickshell.execDetached(["caelestia", "lock", "--set-backend", backend]);
+    }
+
+    function setQylockTheme(themeName: string): void {
+        Quickshell.execDetached(["caelestia", "lock", "--set-theme", themeName]);
+    }
+
     function refreshThemeList(): void {
         listProc.running = true;
     }
