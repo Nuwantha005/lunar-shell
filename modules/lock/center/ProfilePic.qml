@@ -46,7 +46,7 @@ Item {
         id: pfp
 
         anchors.fill: shape
-        path: `${Paths.home}/.face`
+        path: Theme.pfpPath || `${Paths.home}/.face`
 
         layer.enabled: true
         layer.effect: Mask {

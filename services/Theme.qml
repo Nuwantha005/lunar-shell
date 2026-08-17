@@ -18,6 +18,8 @@ Singleton {
     property string lockBackend: "caelestia"
     property string qylockTheme: ""
     property string selectedLockWallpaper: ""
+    property string selectedPfp: ""
+    readonly property string pfpPath: selectedPfp && themePath ? `${themePath}/${selectedPfp}` : `${Paths.state}/pfp.jpg`
     property var themeData: ({})
     property list<var> themesList: []
 
@@ -87,6 +89,7 @@ Singleton {
                 root.lockBackend = data.lockBackend ?? "caelestia";
                 root.qylockTheme = data.qylockTheme ?? "";
                 root.selectedLockWallpaper = data.selectedLockWallpaper ?? "";
+                root.selectedPfp = data.selectedPfp ?? "";
                 root.themeData = data;
             } catch (e) {
                 console.warn("Failed to parse theme.json:", e);

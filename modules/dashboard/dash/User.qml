@@ -88,7 +88,7 @@ Item {
                 id: pfp
 
                 anchors.fill: parent
-                path: `${Paths.home}/.face`
+                path: Theme.pfpPath || `${Paths.home}/.face`
             }
 
             StyledRect {
