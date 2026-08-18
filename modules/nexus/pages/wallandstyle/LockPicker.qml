@@ -195,5 +195,41 @@ PageBase {
                 }
             }
         }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: Theme.lockBackend === "hyprlock"
+            spacing: Tokens.spacing.small
+
+            StyledText {
+                Layout.topMargin: Tokens.spacing.medium
+                Layout.bottomMargin: Tokens.spacing.extraSmall
+                text: Theme.activeHyprlockConfigs.length > 0 ? qsTr("Hyprlock config") : qsTr("No Hyprlock configs available for current theme")
+                font: Tokens.font.title.small
+            }
+
+            ButtonRow {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: Tokens.spacing.small
+                visible: Theme.activeHyprlockConfigs.length > 0
+
+                Repeater {
+                    model: Theme.activeHyprlockConfigs
+
+                    IconTextButton {
+                        required property string modelData
+
+                        text: modelData
+                        font: Tokens.font.body.large
+                        isRound: true
+                        shapeMorph: true
+                        type: Theme.hyprlockConfig === modelData ? IconTextButton.Primary : IconTextButton.Tonal
+                        horizontalPadding: Tokens.padding.extraLarge
+                        verticalPadding: Tokens.padding.medium
+                        onClicked: Theme.setHyprlockConfig(modelData)
+                    }
+                }
+            }
+        }
     }
 }

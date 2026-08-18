@@ -17,9 +17,13 @@ Singleton {
     property string themePath: ""
     property string lockBackend: "caelestia"
     property string qylockTheme: ""
-    property string selectedLockWallpaper: ""
-    property string selectedPfp: ""
-    readonly property string pfpPath: selectedPfp && themePath ? `${themePath}/${selectedPfp}` : `${Paths.state}/pfp.jpg`
+    property string hyprlockConfig: ""
+    readonly property var currentThemeObj: {
+        const list = themesList || [];
+        return list.find(t => t.name === currentTheme) || ({});
+    }
+    readonly property list<string> activeHyprlockConfigs: currentThemeObj.hyprlockConfigs ?? []
+
     property var themeData: ({})
     property list<var> themesList: []
 
@@ -72,6 +76,10 @@ Singleton {
         Quickshell.execDetached(["caelestia", "lock", "--set-theme", themeName]);
     }
 
+    function setHyprlockConfig(configName: string): void {
+        Quickshell.execDetached(["caelestia", "lock", "--set-hyprlock-config", configName]);
+    }
+
     function refreshThemeList(): void {
         listProc.running = true;
     }
@@ -88,6 +96,8 @@ Singleton {
                 root.themePath = data.path ?? "";
                 root.lockBackend = data.lockBackend ?? "caelestia";
                 root.qylockTheme = data.qylockTheme ?? "";
+                root.hyprlockConfig = data.hyprlockConfig ?? "";
+                root.hyprlockConfigs = data.hyprlockConfigs ?? [];
                 root.selectedLockWallpaper = data.selectedLockWallpaper ?? "";
                 root.selectedPfp = data.selectedPfp ?? "";
                 root.themeData = data;

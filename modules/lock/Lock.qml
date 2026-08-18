@@ -64,7 +64,10 @@ Scope {
         // qmllint enable unresolved-type
         name: "unlock"
         description: "Unlock the current session"
-        onPressed: lock.unlock()
+        onPressed: {
+            lock.unlock();
+            Quickshell.execDetached(["pkill", "-USR1", "hyprlock"]);
+        }
     }
 
     IpcHandler {
@@ -74,6 +77,7 @@ Scope {
 
         function unlock(): void {
             lock.unlock();
+            Quickshell.execDetached(["pkill", "-USR1", "hyprlock"]);
         }
 
         function isLocked(): bool {
