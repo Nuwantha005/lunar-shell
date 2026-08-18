@@ -16,7 +16,7 @@ PageBase {
     title: qsTr("Lock screen")
     isSubPage: true
 
-    readonly property list<string> backends: ["caelestia", "qylock", "hyprlock"]
+    readonly property list<string> backends: ["caelestia", "qylock", "custom-qylock", "hyprlock"]
     readonly property list<string> qylockThemes: [
         "Genshin", "R1999_1", "R1999_2", "clockwork", "dog-samurai", "enfield", "field", "forest",
         "girl-coffee", "girl-pillow", "last-of-us", "man-bicycle", "material-you", "minecraft",
@@ -94,7 +94,7 @@ PageBase {
                 IconTextButton {
                     required property string modelData
 
-                    text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                    text: modelData === "custom-qylock" ? qsTr("Custom Qylock") : (modelData.charAt(0).toUpperCase() + modelData.slice(1))
                     font: Tokens.font.body.large
                     isRound: true
                     shapeMorph: true
@@ -108,7 +108,7 @@ PageBase {
 
         ColumnLayout {
             Layout.fillWidth: true
-            visible: Theme.lockBackend === "qylock"
+            visible: Theme.lockBackend === "qylock" || Theme.lockBackend === "custom-qylock"
             spacing: Tokens.spacing.small
 
             StyledText {

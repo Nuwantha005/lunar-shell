@@ -195,7 +195,7 @@ WlSessionLockSurface {
     Loader {
         id: qylockLoader
         anchors.fill: parent
-        active: Theme.lockBackend === "qylock"
+        active: Theme.lockBackend === "qylock" || Theme.lockBackend === "custom-qylock"
         visible: active
         source: "QylockSurface.qml"
         onLoaded: {

@@ -18,7 +18,14 @@ Item {
     readonly property string themeName: Theme.qylockTheme || "nier-automata"
     readonly property string themePath: Quickshell.shellPath("lock-themes/themes/" + themeName)
 
-    property string backgroundOverridePath: ""
+    readonly property string customBgPath: Wallpapers.lockWallpaper
+    readonly property string effectiveOverrideBg: (Theme.lockBackend === "custom-qylock") ? customBgPath : ""
+
+    onEffectiveOverrideBgChanged: {
+        if (themeLoader.item && ("overrideBg" in themeLoader.item)) {
+            themeLoader.item.overrideBg = root.effectiveOverrideBg;
+        }
+    }
 
     // Emergency unlock: Ctrl+Alt+Backspace 3 times in 3 seconds
     property int panicCount: 0
@@ -40,18 +47,6 @@ Item {
                     if (root.lock) root.lock.unlock();
                 }
                 event.accepted = true;
-            }
-        }
-    }
-
-    FileView {
-        path: `${Paths.state}/lock_override_bg`
-        watchChanges: true
-        printErrors: false
-        onLoaded: {
-            root.backgroundOverridePath = text().trim();
-            if (themeLoader.item && ("overrideBg" in themeLoader.item)) {
-                themeLoader.item.overrideBg = root.backgroundOverridePath;
             }
         }
     }
@@ -166,7 +161,7 @@ Item {
             if (item) {
                 item.forceActiveFocus();
                 if ("overrideBg" in item) {
-                    item.overrideBg = root.backgroundOverridePath;
+                    item.overrideBg = root.effectiveOverrideBg;
                 }
             }
         }
