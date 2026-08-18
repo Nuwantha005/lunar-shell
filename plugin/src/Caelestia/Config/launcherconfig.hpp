@@ -74,10 +74,10 @@ class LauncherConfig : public ConfigObject {
                 { u"command"_s, QStringList{ u"autocomplete"_s, u"pfp"_s } },
             }),
             vmap({
-                { u"name"_s, u"Lockscreen Wallpaper"_s },
+                { u"name"_s, u"Lock Screen Picker"_s },
                 { u"icon"_s, u"screen_lock_portrait"_s },
-                { u"description"_s, u"Change lock screen wallpaper"_s },
-                { u"command"_s, QStringList{ u"autocomplete"_s, u"lockscreen"_s } },
+                { u"description"_s, u"Open lock screen picker"_s },
+                { u"command"_s, QStringList{ u"lockPicker"_s } },
             }),
             vmap({
                 { u"name"_s, u"Variant"_s },

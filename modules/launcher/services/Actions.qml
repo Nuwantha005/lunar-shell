@@ -25,7 +25,7 @@ Searcher {
             const rawActions = GlobalConfig.launcher.actions || [];
             const hasTheme = rawActions.some(a => a.name === "Theme" || (a.command && a.command[1] === "theme"));
             const hasPfp = rawActions.some(a => a.name === "Profile Picture" || (a.command && a.command[1] === "pfp"));
-            const hasLock = rawActions.some(a => a.name === "Lockscreen Wallpaper" || (a.command && a.command[1] === "lockscreen"));
+            const hasLock = rawActions.some(a => a.name === "Lock Screen Picker" || a.name === "Lockscreen Wallpaper" || (a.command && (a.command[0] === "lockPicker" || a.command[1] === "lockscreen")));
 
             const actions = [...rawActions];
             if (!hasTheme) {
@@ -46,10 +46,10 @@ Searcher {
             }
             if (!hasLock) {
                 actions.push({
-                    name: "Lockscreen Wallpaper",
+                    name: "Lock Screen Picker",
                     icon: "screen_lock_portrait",
-                    description: "Change lock screen wallpaper",
-                    command: ["autocomplete", "lockscreen"]
+                    description: "Open lock screen picker",
+                    command: ["lockPicker"]
                 });
             }
             return actions.filter(a => (a.enabled ?? true) && (GlobalConfig.launcher.enableDangerousActions || !(a.dangerous ?? false)));
@@ -76,6 +76,9 @@ Searcher {
             } else if (command[0] === "setMode" && command.length > 1) {
                 list.screenState.launcher = false;
                 Colours.setMode(command[1]);
+            } else if (command[0] === "lockPicker") {
+                list.screenState.launcher = false;
+                Quickshell.execDetached(["caelestia", "lock", "--picker"]);
             } else {
                 list.screenState.launcher = false;
                 if (!SessionManager.exec(command))

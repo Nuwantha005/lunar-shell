@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import qs.components.misc
 import qs.services
+import qs.modules.lock
 
 Scope {
     property alias lock: lock
@@ -70,6 +71,19 @@ Scope {
         }
     }
 
+    LazyLoader {
+        id: lockPickerLoader
+
+        Variants {
+            model: Screens.screens
+
+            LockPickerWindow {
+                modelData: modelData
+                onClose: lockPickerLoader.activeAsync = false
+            }
+        }
+    }
+
     IpcHandler {
         function lock(): void {
             lock.locked = true;
@@ -82,6 +96,14 @@ Scope {
 
         function isLocked(): bool {
             return lock.locked;
+        }
+
+        function openPicker(): void {
+            lockPickerLoader.activeAsync = true;
+        }
+
+        function closePicker(): void {
+            lockPickerLoader.activeAsync = false;
         }
 
         target: "lock"

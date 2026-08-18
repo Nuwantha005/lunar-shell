@@ -24,8 +24,8 @@ Item {
         const parts = search.text.slice(actionPrefix.length).trim().split(" ");
         return parts[0].toLowerCase();
     }
-    readonly property bool showCarousel: ["wallpaper", "theme", "pfp", "lockscreen"].includes(searchCmd)
-    readonly property string carouselType: showCarousel ? (searchCmd === "lockscreen" ? "lock" : searchCmd) : ""
+    readonly property bool showCarousel: ["wallpaper", "theme", "pfp"].includes(searchCmd)
+    readonly property string carouselType: showCarousel ? searchCmd : ""
     readonly property bool showWallpapers: showCarousel
     readonly property var currentList: showCarousel ? carouselList.item : appList.item // Can be either ListView or PathView, so can't type properly
     property string animState: showCarousel ? "wallpapers" : "apps"
