@@ -3,11 +3,14 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
+import Caelestia
 import Caelestia.Components
 import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
+import qs.utils
 
 FocusScope {
     id: root
@@ -82,6 +85,16 @@ FocusScope {
         };
         const fname = filenames[name] || (name + ".gif");
         return Quickshell.shellPath("lock-themes/Assets/" + fname);
+    }
+
+    function getCacheKey(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        const base = str.split("/").pop().replace(/[^a-zA-Z0-9._-]/g, "_");
+        return Math.abs(hash).toString(36) + "_" + base + ".png";
     }
 
     function initIndices(): void {
@@ -435,36 +448,10 @@ FocusScope {
                             radius: Tokens.rounding.large
                             color: Colours.tPalette.m3surfaceContainer
 
-                            Image {
+                            CaelestiaPreview {
                                 anchors.fill: parent
-                                source: Wallpapers.lockWallpaper || Wallpapers.current
-                                fillMode: Image.PreserveAspectCrop
-                            }
-
-                            ColumnLayout {
-                                anchors.centerIn: parent
-                                spacing: Tokens.spacing.medium
-
-                                StyledClippingRect {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    implicitWidth: 90
-                                    implicitHeight: 90
-                                    radius: Tokens.rounding.full
-                                    color: Colours.palette.m3surface
-
-                                    Image {
-                                        anchors.fill: parent
-                                        source: root.pfpList.length > 0 && root.pfpIndex < root.pfpList.length ? root.pfpList[root.pfpIndex].path : ""
-                                        fillMode: Image.PreserveAspectCrop
-                                    }
-                                }
-
-                                StyledText {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: "Caelestia Session Lock"
-                                    font: Tokens.font.title.medium
-                                    color: Colours.palette.m3onSurface
-                                }
+                                wallpaperPath: Wallpapers.lockWallpaper || Wallpapers.current
+                                pfpPath: root.pfpList.length > 0 && root.pfpIndex < root.pfpList.length ? root.pfpList[root.pfpIndex].path : ""
                             }
                         }
                     }
@@ -485,6 +472,51 @@ FocusScope {
                     anchors.fill: parent
                     visible: root.activeTab === 1
 
+                    readonly property string activeWallPath: root.wallpaperList.length > 0 && root.wallpaperIndex < root.wallpaperList.length ? root.wallpaperList[root.wallpaperIndex].path : Wallpapers.lockWallpaper
+                    readonly property string activePfpPath: root.pfpList.length > 0 && root.pfpIndex < root.pfpList.length ? root.pfpList[root.pfpIndex].path : ""
+                    readonly property bool hasConfigs: (Theme.activeHyprlockConfigs || []).length > 0
+
+                    readonly property string previewCacheFileName: root.getCacheKey(activeWallPath + ":" + activePfpPath)
+                    readonly property string previewCacheFilePath: Paths.cache + "/previews/hyprlock/" + previewCacheFileName
+
+                    property bool isRendering: false
+
+                    function triggerRender(): void {
+                        if (visible && hasConfigs && !isRendering && activeWallPath !== "") {
+                            isRendering = true;
+                            Quickshell.execDetached([
+                                `${Paths.home}/.local/bin/caelestia`, "lock", "--render-preview",
+                                "--preview-backend", "hyprlock",
+                                "--preview-wallpaper", hyprlockTab.activeWallPath,
+                                "--preview-pfp", hyprlockTab.activePfpPath,
+                                "--preview-output", hyprlockTab.previewCacheFilePath
+                            ]);
+                            refreshTimer.restart();
+                        }
+                    }
+
+                    Timer {
+                        id: refreshTimer
+                        interval: 2200
+                        repeat: false
+                        onTriggered: {
+                            hyprlockTab.isRendering = false;
+                            const src = hyprlockImg.source;
+                            hyprlockImg.source = "";
+                            hyprlockImg.source = src;
+                        }
+                    }
+
+                    onVisibleChanged: {
+                        if (visible && hyprlockImg.status !== Image.Ready) triggerRender();
+                    }
+                    onActiveWallPathChanged: {
+                        hyprlockImg.source = "file://" + previewCacheFilePath;
+                    }
+                    onActivePfpPathChanged: {
+                        hyprlockImg.source = "file://" + previewCacheFilePath;
+                    }
+
                     Item {
                         id: hyprlockCard
                         anchors.centerIn: parent
@@ -496,34 +528,66 @@ FocusScope {
                             radius: Tokens.rounding.large
                             color: Colours.tPalette.m3surfaceContainer
 
+                            // 1. Cached PNG Image
                             Image {
+                                id: hyprlockImg
                                 anchors.fill: parent
-                                source: root.wallpaperList.length > 0 && root.wallpaperIndex < root.wallpaperList.length ? root.wallpaperList[root.wallpaperIndex].path : Wallpapers.lockWallpaper
+                                source: "file://" + hyprlockTab.previewCacheFilePath
                                 fillMode: Image.PreserveAspectCrop
+                                visible: status === Image.Ready
+                                onStatusChanged: {
+                                    if (status === Image.Error && hyprlockTab.visible && hyprlockTab.hasConfigs) {
+                                        hyprlockTab.triggerRender();
+                                    }
+                                }
                             }
 
+                            // 2. Rendering Spinner State
                             ColumnLayout {
                                 anchors.centerIn: parent
                                 spacing: Tokens.spacing.medium
+                                visible: hyprlockTab.hasConfigs && hyprlockImg.status !== Image.Ready
 
-                                StyledClippingRect {
+                                MaterialIcon {
                                     Layout.alignment: Qt.AlignHCenter
-                                    implicitWidth: 80
-                                    implicitHeight: 80
-                                    radius: Tokens.rounding.full
-                                    color: Colours.palette.m3surface
+                                    text: "sync"
+                                    color: Colours.palette.m3primary
+                                    fontStyle: Tokens.font.icon.builders.large.scale(2).build()
 
-                                    Image {
-                                        anchors.fill: parent
-                                        source: root.pfpList.length > 0 && root.pfpIndex < root.pfpList.length ? root.pfpList[root.pfpIndex].path : ""
-                                        fillMode: Image.PreserveAspectCrop
+                                    NumberAnimation on rotation {
+                                        from: 0
+                                        to: 360
+                                        duration: 1200
+                                        loops: Animation.Infinite
+                                        running: hyprlockTab.isRendering
                                     }
                                 }
 
                                 StyledText {
                                     Layout.alignment: Qt.AlignHCenter
-                                    text: "Hyprlock"
-                                    font: Tokens.font.title.medium
+                                    text: hyprlockTab.isRendering ? qsTr("Rendering preview...") : qsTr("Loading preview...")
+                                    font: Tokens.font.body.medium
+                                    color: Colours.palette.m3onSurfaceVariant
+                                }
+                            }
+
+                            // 3. No Configs Available State
+                            ColumnLayout {
+                                anchors.centerIn: parent
+                                spacing: Tokens.spacing.medium
+                                visible: !hyprlockTab.hasConfigs
+
+                                MaterialIcon {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: "error_outline"
+                                    color: Colours.palette.m3error
+                                    fontStyle: Tokens.font.icon.builders.large.scale(2).build()
+                                }
+
+                                StyledText {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: qsTr("No hyprlock configs available for current theme")
+                                    font: Tokens.font.body.large
                                     color: Colours.palette.m3onSurface
                                 }
                             }
@@ -557,7 +621,61 @@ FocusScope {
                     visible: root.activeTab === 3
 
                     readonly property string activeWallPath: root.wallpaperList.length > 0 && root.wallpaperIndex < root.wallpaperList.length ? root.wallpaperList[root.wallpaperIndex].path : Wallpapers.lockWallpaper
-                    readonly property bool isVideoWall: activeWallPath.endsWith(".mp4") || activeWallPath.endsWith(".webm") || activeWallPath.endsWith(".mkv")
+                    readonly property string activeThemeName: root.qylockThemes[root.qylockIndex]
+
+                    readonly property string previewCacheFileName: root.getCacheKey(activeWallPath + ":" + activeThemeName)
+                    readonly property string previewCacheFilePath: Paths.cache + "/previews/custom-qylock/" + previewCacheFileName
+
+                    property bool isRendering: false
+
+                    function triggerRender(): void {
+                        console.log("[LOCK PICKER DEBUG] triggerRender custom-qylock wall:", activeWallPath, "theme:", activeThemeName, "output:", previewCacheFilePath);
+                        if (visible && !isRendering && activeWallPath !== "" && activeThemeName !== "") {
+                            isRendering = true;
+                            Quickshell.execDetached([
+                                `${Paths.home}/.local/bin/caelestia`, "lock", "--render-preview",
+                                "--preview-backend", "custom-qylock",
+                                "--preview-wallpaper", customQylockTab.activeWallPath,
+                                "--preview-theme", customQylockTab.activeThemeName,
+                                "--preview-output", customQylockTab.previewCacheFilePath
+                            ]);
+                            customQylockRefreshTimer.restart();
+                        }
+                    }
+
+                    Timer {
+                        id: customQylockRefreshTimer
+                        interval: 3500
+                        repeat: false
+                        onTriggered: {
+                            console.log("[LOCK PICKER DEBUG] custom-qylock refreshTimer triggered, refreshing source");
+                            customQylockTab.isRendering = false;
+                            const src = customQylockImg.source;
+                            customQylockImg.source = "";
+                            customQylockImg.source = src;
+                        }
+                    }
+
+                    onVisibleChanged: {
+                        console.log("[LOCK PICKER DEBUG] customQylockTab visibleChanged:", visible, "status:", customQylockImg.status);
+                        if (visible && customQylockImg.status !== Image.Ready) triggerRender();
+                    }
+                    Connections {
+                        target: root
+                        function onActiveTabChanged() {
+                            if (root.activeTab === 3 && customQylockImg.status !== Image.Ready) {
+                                customQylockTab.triggerRender();
+                            }
+                        }
+                    }
+                    onActiveWallPathChanged: {
+                        console.log("[LOCK PICKER DEBUG] customQylockTab wallChanged:", activeWallPath);
+                        customQylockImg.source = "file://" + previewCacheFilePath;
+                    }
+                    onActiveThemeNameChanged: {
+                        console.log("[LOCK PICKER DEBUG] customQylockTab themeChanged:", activeThemeName);
+                        customQylockImg.source = "file://" + previewCacheFilePath;
+                    }
 
                     Item {
                         id: customQylockCard
@@ -570,18 +688,48 @@ FocusScope {
                             radius: Tokens.rounding.large
                             color: Colours.tPalette.m3surfaceContainer
 
+                            // 1. Cached PNG Image
                             Image {
+                                id: customQylockImg
                                 anchors.fill: parent
-                                visible: !customQylockTab.isVideoWall
-                                source: customQylockTab.activeWallPath
+                                source: "file://" + customQylockTab.previewCacheFilePath
                                 fillMode: Image.PreserveAspectCrop
+                                visible: status === Image.Ready
+                                onStatusChanged: {
+                                    console.log("[LOCK PICKER DEBUG] customQylockImg statusChanged:", status, "src:", source);
+                                    if (status === Image.Error && customQylockTab.visible) {
+                                        customQylockTab.triggerRender();
+                                    }
+                                }
                             }
 
-                            AnimatedImage {
-                                anchors.fill: parent
-                                opacity: 0.85
-                                source: root.getQylockPreview(root.qylockThemes[root.qylockIndex])
-                                fillMode: Image.PreserveAspectCrop
+                            // 2. Rendering Spinner State
+                            ColumnLayout {
+                                anchors.centerIn: parent
+                                spacing: Tokens.spacing.medium
+                                visible: customQylockImg.status !== Image.Ready
+
+                                MaterialIcon {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: "sync"
+                                    color: Colours.palette.m3primary
+                                    fontStyle: Tokens.font.icon.builders.large.scale(2).build()
+
+                                    NumberAnimation on rotation {
+                                        from: 0
+                                        to: 360
+                                        duration: 1200
+                                        loops: Animation.Infinite
+                                        running: customQylockTab.isRendering
+                                    }
+                                }
+
+                                StyledText {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: customQylockTab.isRendering ? qsTr("Rendering preview...") : qsTr("Loading preview...")
+                                    font: Tokens.font.body.medium
+                                    color: Colours.palette.m3onSurfaceVariant
+                                }
                             }
                         }
                     }
