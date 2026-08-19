@@ -479,42 +479,52 @@ FocusScope {
                     readonly property string previewCacheFileName: root.getCacheKey(activeWallPath + ":" + activePfpPath)
                     readonly property string previewCacheFilePath: Paths.cache + "/previews/hyprlock/" + previewCacheFileName
 
-                    property bool isRendering: false
+                    property double renderTimestamp: 0
+                    property bool isRendering: hyprlockRenderProc.running
 
-                    function triggerRender(): void {
-                        if (visible && hasConfigs && !isRendering && activeWallPath !== "") {
-                            isRendering = true;
-                            Quickshell.execDetached([
-                                `${Paths.home}/.local/bin/caelestia`, "lock", "--render-preview",
-                                "--preview-backend", "hyprlock",
-                                "--preview-wallpaper", hyprlockTab.activeWallPath,
-                                "--preview-pfp", hyprlockTab.activePfpPath,
-                                "--preview-output", hyprlockTab.previewCacheFilePath
-                            ]);
-                            refreshTimer.restart();
+                    Process {
+                        id: hyprlockRenderProc
+                        command: [
+                            `${Paths.home}/.local/bin/caelestia`, "lock", "--render-preview",
+                            "--preview-backend", "hyprlock",
+                            "--preview-wallpaper", hyprlockTab.activeWallPath,
+                            "--preview-pfp", hyprlockTab.activePfpPath,
+                            "--preview-output", hyprlockTab.previewCacheFilePath
+                        ]
+                        onExited: (exitCode, exitStatus) => {
+                            if (exitCode === 0) {
+                                hyprlockTab.renderTimestamp = Date.now();
+                            }
                         }
                     }
 
                     Timer {
-                        id: refreshTimer
-                        interval: 2200
+                        id: hyprlockDebounceTimer
+                        interval: 200
                         repeat: false
-                        onTriggered: {
-                            hyprlockTab.isRendering = false;
-                            const src = hyprlockImg.source;
-                            hyprlockImg.source = "";
-                            hyprlockImg.source = src;
-                        }
+                        onTriggered: hyprlockTab.doRender()
                     }
 
-                    onVisibleChanged: {
-                        if (visible && hyprlockImg.status !== Image.Ready) triggerRender();
+                    function triggerRender(): void {
+                        if (!visible || !hasConfigs) return;
+                        hyprlockDebounceTimer.restart();
                     }
+
+                    function doRender(): void {
+                        if (!visible || !hasConfigs || activeWallPath === "") return;
+                        if (hyprlockImg.status === Image.Ready && renderTimestamp > 0) return;
+                        if (hyprlockRenderProc.running) hyprlockRenderProc.running = false;
+                        hyprlockRenderProc.running = true;
+                    }
+
+                    onVisibleChanged: triggerRender()
                     onActiveWallPathChanged: {
-                        hyprlockImg.source = "file://" + previewCacheFilePath;
+                        renderTimestamp = 0;
+                        triggerRender();
                     }
                     onActivePfpPathChanged: {
-                        hyprlockImg.source = "file://" + previewCacheFilePath;
+                        renderTimestamp = 0;
+                        triggerRender();
                     }
 
                     Item {
@@ -532,11 +542,12 @@ FocusScope {
                             Image {
                                 id: hyprlockImg
                                 anchors.fill: parent
-                                source: "file://" + hyprlockTab.previewCacheFilePath
+                                cache: false
+                                source: hyprlockTab.previewCacheFilePath !== "" ? ("file://" + hyprlockTab.previewCacheFilePath + (hyprlockTab.renderTimestamp > 0 ? ("?t=" + hyprlockTab.renderTimestamp) : "")) : ""
                                 fillMode: Image.PreserveAspectCrop
                                 visible: status === Image.Ready
                                 onStatusChanged: {
-                                    if (status === Image.Error && hyprlockTab.visible && hyprlockTab.hasConfigs) {
+                                    if (status === Image.Error && hyprlockTab.visible && hyprlockTab.hasConfigs && !hyprlockRenderProc.running) {
                                         hyprlockTab.triggerRender();
                                     }
                                 }
@@ -626,55 +637,52 @@ FocusScope {
                     readonly property string previewCacheFileName: root.getCacheKey(activeWallPath + ":" + activeThemeName)
                     readonly property string previewCacheFilePath: Paths.cache + "/previews/custom-qylock/" + previewCacheFileName
 
-                    property bool isRendering: false
+                    property double renderTimestamp: 0
+                    property bool isRendering: customQylockRenderProc.running
 
-                    function triggerRender(): void {
-                        console.log("[LOCK PICKER DEBUG] triggerRender custom-qylock wall:", activeWallPath, "theme:", activeThemeName, "output:", previewCacheFilePath);
-                        if (visible && !isRendering && activeWallPath !== "" && activeThemeName !== "") {
-                            isRendering = true;
-                            Quickshell.execDetached([
-                                `${Paths.home}/.local/bin/caelestia`, "lock", "--render-preview",
-                                "--preview-backend", "custom-qylock",
-                                "--preview-wallpaper", customQylockTab.activeWallPath,
-                                "--preview-theme", customQylockTab.activeThemeName,
-                                "--preview-output", customQylockTab.previewCacheFilePath
-                            ]);
-                            customQylockRefreshTimer.restart();
+                    Process {
+                        id: customQylockRenderProc
+                        command: [
+                            `${Paths.home}/.local/bin/caelestia`, "lock", "--render-preview",
+                            "--preview-backend", "custom-qylock",
+                            "--preview-wallpaper", customQylockTab.activeWallPath,
+                            "--preview-theme", customQylockTab.activeThemeName,
+                            "--preview-output", customQylockTab.previewCacheFilePath
+                        ]
+                        onExited: (exitCode, exitStatus) => {
+                            if (exitCode === 0) {
+                                customQylockTab.renderTimestamp = Date.now();
+                            }
                         }
                     }
 
                     Timer {
-                        id: customQylockRefreshTimer
-                        interval: 3500
+                        id: customQylockDebounceTimer
+                        interval: 200
                         repeat: false
-                        onTriggered: {
-                            console.log("[LOCK PICKER DEBUG] custom-qylock refreshTimer triggered, refreshing source");
-                            customQylockTab.isRendering = false;
-                            const src = customQylockImg.source;
-                            customQylockImg.source = "";
-                            customQylockImg.source = src;
-                        }
+                        onTriggered: customQylockTab.doRender()
                     }
 
-                    onVisibleChanged: {
-                        console.log("[LOCK PICKER DEBUG] customQylockTab visibleChanged:", visible, "status:", customQylockImg.status);
-                        if (visible && customQylockImg.status !== Image.Ready) triggerRender();
+                    function triggerRender(): void {
+                        if (!visible) return;
+                        customQylockDebounceTimer.restart();
                     }
-                    Connections {
-                        target: root
-                        function onActiveTabChanged() {
-                            if (root.activeTab === 3 && customQylockImg.status !== Image.Ready) {
-                                customQylockTab.triggerRender();
-                            }
-                        }
+
+                    function doRender(): void {
+                        if (!visible || activeWallPath === "" || activeThemeName === "") return;
+                        if (customQylockImg.status === Image.Ready && renderTimestamp > 0) return;
+                        if (customQylockRenderProc.running) customQylockRenderProc.running = false;
+                        customQylockRenderProc.running = true;
                     }
+
+                    onVisibleChanged: triggerRender()
                     onActiveWallPathChanged: {
-                        console.log("[LOCK PICKER DEBUG] customQylockTab wallChanged:", activeWallPath);
-                        customQylockImg.source = "file://" + previewCacheFilePath;
+                        renderTimestamp = 0;
+                        triggerRender();
                     }
                     onActiveThemeNameChanged: {
-                        console.log("[LOCK PICKER DEBUG] customQylockTab themeChanged:", activeThemeName);
-                        customQylockImg.source = "file://" + previewCacheFilePath;
+                        renderTimestamp = 0;
+                        triggerRender();
                     }
 
                     Item {
@@ -692,12 +700,12 @@ FocusScope {
                             Image {
                                 id: customQylockImg
                                 anchors.fill: parent
-                                source: "file://" + customQylockTab.previewCacheFilePath
+                                cache: false
+                                source: customQylockTab.previewCacheFilePath !== "" ? ("file://" + customQylockTab.previewCacheFilePath + (customQylockTab.renderTimestamp > 0 ? ("?t=" + customQylockTab.renderTimestamp) : "")) : ""
                                 fillMode: Image.PreserveAspectCrop
                                 visible: status === Image.Ready
                                 onStatusChanged: {
-                                    console.log("[LOCK PICKER DEBUG] customQylockImg statusChanged:", status, "src:", source);
-                                    if (status === Image.Error && customQylockTab.visible) {
+                                    if (status === Image.Error && customQylockTab.visible && !customQylockRenderProc.running) {
                                         customQylockTab.triggerRender();
                                     }
                                 }
