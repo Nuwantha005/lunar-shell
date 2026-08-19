@@ -208,3 +208,40 @@ When a theme's wallpaper should replace the Qylock theme's background:
 
 This is per-theme implementation (each Qylock theme's Main.qml needs to support it).
 Start with one or two themes. Not urgent.
+
+# Additional Notes and Future Work
+
+## QYLock not supporting custom background
+some qylock themes dont respect enforecd backgorund for some reason: their backgorund might be qml generated for example. there were few such cases that came acrros in the first run:
+```
+issue: blur plane, nothing else
+themes: genshin, clockwork
+issue: default background
+themes:R1999_1, girl-coffee, last-of-us, nothing, star-rail, wuwa
+issue: doesn't unlock when pressed enter
+themes: material-you, ninesols, ninja_gaiden, nothing,  osu, osumania,
+```
+
+Not unlocking part is some incompatibility or something. They didn't wor when i used qylock raw either.
+
+## Previews
+
+### Headless rendering
+We first tired a headless hyprland which was impossible, and then `weston` but it didnt suuport `grim` to take screenshots, so we moved on with `labwc` which worked perfectly fine.
+
+Right now we just dynamically lazy load the previews using the headless compositor an cache them. But we can go ao step further and live pipe the frames from the headless to our window for live wallpaper display, but this is an overkill for now.
+
+### Hyprlock
+Hyprlock rendering works fine. But i forgot that when we have multiple configs, we need a way to switch between them. Rn left right moves wallpaper and up down moves the pfp. maybe we can use space to move config.
+
+### Caelestia
+The caelestia preview is fine, except its pfp is not inside that diamond shape container like in the real one. Also i have this idea to swich its colours similar to how we use wallpaepr carousel, since its left right keys doesnt do anything rn.
+
+### Native Qylock
+The gifs are too blury. maybe we can use that live rendering thing i mentoned in [[###Headless rendering]] here to get high res preview while keeping gifs for left and right side thumbnails.
+
+## Publishing
+I think I should add this to portfolio. But before that i neeed to clean files in the `.agent` folder since they are outdated. Then I have to update all the readme's acknoledge the original repos and outline my custom modifications. Only then i can proceed to take ss , video and do some prsentation, which i hates. So I will do that later.
+
+## Developement
+I'm kinda getting fratigue for non stop working on this for few days so i will move on to something else and come back later. (or never idk) As my last action I will try to add video support for custom qylock -  really want that reze dancing video as my lock bg....

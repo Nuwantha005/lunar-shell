@@ -140,7 +140,8 @@ Searcher {
 
         recursive: true
         path: root.wallDir
-        filter: FileSystemModel.Images
+        filter: FileSystemModel.Files
+        nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif", "*.mp4", "*.webm", "*.mkv", "*.mov", "*.avi"]
     }
 
     Process {
