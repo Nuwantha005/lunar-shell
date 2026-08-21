@@ -3,7 +3,7 @@
 ## Overview
 
 Custom QML panels and widgets to be added to lunar-shell.
-These are all deferred to Phase 6 — implement AFTER Phases 1-4 are stable.
+Phases 1-4 (including theme engine, dynamic color persistence, pywalfox bridge, and lock screen system) are complete and stable. These widgets are planned for Phase 6.
 
 ## Widget 1: Screenshot Tools Panel
 
@@ -138,7 +138,8 @@ This approach:
 Identify them by reading `shell.qml` and `modules/` directory.
 
 ## Future Ideas (Not yet planned)
-- AI-powered image description (describe screenshot)
-- Clipboard history search improvements
-- Custom weather widget with more detail
-- Music visualizer integration
+- add auto paste to QML Clipboard viewer
+- add image preview support for QML clipboard viewer
+- add battery max charge limiter with valuess [60%, 80%, 100%] using ~/dotfiles/customScripts/batter_toggle.sh` to the bottom of the battery status QML widget.
+- add a quick audio output / input switcher form speakers to BT: one that actually works for all sources.
+

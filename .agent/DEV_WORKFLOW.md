@@ -126,12 +126,25 @@ vim ~/work-linux/projects/arch/shell/lunar-cli/src/caelestia/utils/wallpaper.py
 caelestia wallpaper -r
 ```
 
-### Editing Lock Screen Themes (Qylock QML)
+### Editing Lock Screen Themes & Testing Backends (Qylock & Hyprlock)
 
 ```bash
-# Edit files in lunar-lock/
+# 1. Edit lock screen theme QML in lunar-lock/ or QML modules in lunar-shell/
 vim ~/work-linux/projects/arch/shell/lunar-lock/themes/nier-automata/Main.qml
 # Lunar shell accesses it instantly via lock-themes symlink!
+
+# 2. Test instant Lock Screen Picker UI:
+caelestia lock --picker
+
+# 3. Test batch headless preview generation (labwc compositor + grim):
+caelestia lock --generate-previews
+
+# 4. Test single JIT preview rendering:
+caelestia lock --render-preview \
+  --preview-backend custom-qylock \
+  --preview-theme nier-automata \
+  --preview-wallpaper ~/Pictures/themes/jinx/wallpapers/wall1.jpg \
+  --preview-output /tmp/test_preview.png
 ```
 
 ---

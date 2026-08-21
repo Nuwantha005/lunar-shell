@@ -29,9 +29,11 @@
   "schemeMode": "dark",
   "schemeVariant": "tonalspot",
   "selectedWallpaper": "wallpapers/wall1.jpg",
+  "selectedLockWallpaper": "wallpapers/wall1.jpg",
   "selectedPfp": "pfp/pfp1.png",
-  "lockBackend": "caelestia",
-  "qylockTheme": null
+  "lockBackend": "custom-qylock",
+  "qylockTheme": "nier-automata",
+  "hyprlockConfig": "lock_screen1.conf"
 }
 ```
 
@@ -40,10 +42,12 @@ Field explanations:
 - `schemeFlavour`: for predefined schemes (e.g. `"mocha"` for catppuccin). `"default"` or `"hard"` for dynamic.
 - `schemeMode`: `"dark"` or `"light"`. This OVERRIDES smart detection. If you want always-dark, set this.
 - `schemeVariant`: `"tonalspot"`, `"vibrant"`, `"expressive"`, `"fidelity"`, etc. Overrides smart colourfulness detection.
-- `selectedWallpaper`: relative path from theme dir. Updated by wallpaper picker.
+- `selectedWallpaper`: relative path from theme dir. Updated by desktop wallpaper picker. Supports image (`.jpg`, `.png`, `.webp`) and video (`.mp4`, `.webm`).
+- `selectedLockWallpaper`: relative path from theme dir. Decoupled lock screen wallpaper/video background.
 - `selectedPfp`: relative path from theme dir. Updated by pfp picker.
-- `lockBackend`: `"caelestia"`, `"qylock"`, or `"hyprlock"`.
-- `qylockTheme`: name of Qylock theme to use when lockBackend is `"qylock"`. e.g. `"nier-automata"`.
+- `lockBackend`: `"caelestia"`, `"qylock"`, `"custom-qylock"`, or `"hyprlock"`.
+- `qylockTheme`: name of Qylock theme to use when lockBackend is `"qylock"` or `"custom-qylock"`. e.g. `"nier-automata"`.
+- `hyprlockConfig`: filename of the Hyprlock configuration file inside `hyprlock/` directory when `lockBackend` is `"hyprlock"`. e.g. `"lock_screen1.conf"`.
 
 ## CLI: theme_engine.py
 
@@ -58,43 +62,37 @@ THEME_STATE_PATH = c_state_dir / "theme.json"
 def get_themes_dir() -> Path:
     """Returns ~/Pictures/themes/"""
 
-def list_themes() -> list[str]:
-    """List all subdirs with a theme.json"""
+def list_themes() -> list[dict]:
+    """List all subdirs with theme metadata, resolving wallpapers, lock wallpapers, pfps, and hyprlock configs."""
 
-def get_current_theme() -> dict | None:
-    """Read active theme from ~/.local/state/caelestia/theme.json.
-    Returns dict of theme.json contents, or None if no theme active."""
+def get_current_theme_state() -> dict:
+    """Read active theme state from ~/.local/state/caelestia/theme.json."""
 
-def load_theme_definition(name: str) -> dict:
-    """Load ~/Pictures/themes/<name>/theme.json"""
+def save_theme_state(data: dict) -> None:
+    """Save state dict to ~/.local/state/caelestia/theme.json."""
 
-def set_theme(name: str) -> None:
+def set_theme(name: str) -> bool:
     """
     Full theme application pipeline:
-    1. load_theme_definition(name)
-    2. Save theme state FIRST & update active scheme.json (name & flavour) immediately
-       so dynamic colour pipeline works correctly.
-    3. Resolve wallpaper: selectedWallpaper if set, else first in wallpapers/
-    4. Call set_wallpaper(wall) — triggers colour pipeline
-       (scheme.json will be updated with dynamic colours from this wallpaper)
-    5. Resolve pfp: selectedPfp if set, else first in pfp/
-    6. Symlink pfp → ~/.local/state/caelestia/pfp.jpg
-    7. Notify: notify-send "Theme applied" "Switched to {name}"
+    1. Resolve theme metadata and wallpapers/pfps
+    2. Save theme state to theme.json (so schemeMode & schemeVariant are honored)
+    3. Update scheme.json immediately
+    4. Call set_wallpaper() — triggers full color pipeline
+    5. Copy / symlink pfp -> ~/.local/state/caelestia/pfp.jpg and ~/.face
+    6. Write lock override background path to ~/.local/state/caelestia/lock_override_bg
     """
 
-def set_theme_wallpaper(wall_path: str) -> None:
-    """
-    Set a specific wallpaper within the current theme:
-    1. Call set_wallpaper(wall_path)
-    2. Update theme.json selectedWallpaper field
-    """
+def set_theme_wallpaper(wall_path: str) -> bool:
+    """Set desktop wallpaper and update selectedWallpaper in active theme.json."""
 
-def set_theme_pfp(pfp_path: str) -> None:
-    """
-    Set a specific pfp within the current theme:
-    1. Copy pfp_path → ~/.local/state/caelestia/pfp.jpg
-    2. Update theme.json selectedPfp field
-    """
+def set_theme_lock_wallpaper(wallpaper_path: str) -> bool:
+    """Set lock screen wallpaper/video override and update selectedLockWallpaper in active theme.json."""
+
+def set_theme_hyprlock_config(config_name: str) -> bool:
+    """Set active Hyprlock config file name and update hyprlockConfig in active theme.json."""
+
+def set_theme_pfp(pfp_path: str) -> bool:
+    """Symlink pfp -> ~/.local/state/caelestia/pfp.jpg and ~/.face, updating selectedPfp in theme.json."""
 ```
 
 ## CLI: theme.py Subcommand
@@ -123,6 +121,7 @@ Singleton {
     property string themePath: ""
     property string lockBackend: "caelestia"
     property string qylockTheme: ""
+    property string hyprlockConfig: ""
     property var themeData: ({})
 
     FileView {
@@ -134,6 +133,7 @@ Singleton {
             root.themePath = t.path ?? "";
             root.lockBackend = t.lockBackend ?? "caelestia";
             root.qylockTheme = t.qylockTheme ?? "";
+            root.hyprlockConfig = t.hyprlockConfig ?? "";
             root.themeData = t;
         }
     }
@@ -141,7 +141,7 @@ Singleton {
     FileSystemModel { id: themesDirModel; path: Paths.home + "/Pictures/themes"; filter: FileSystemModel.Directories; onEntriesChanged: root.refreshThemeList() }
     FileSystemModel { id: wallpapersModel; path: root.themePath + "/wallpapers"; filter: FileSystemModel.Images }
     FileSystemModel { id: pfpsModel; path: root.themePath + "/pfp"; filter: FileSystemModel.Images }
-    
+
     Searcher { id: pfpsSearcher; list: pfpsModel.entries; key: "name" }
 
     readonly property var themeWallpapers: wallpapersModel.entries
@@ -149,34 +149,43 @@ Singleton {
 
     function setTheme(name) { Quickshell.execDetached(["caelestia", "theme", "set", name]); }
     function setWallpaper(path) { Quickshell.execDetached(["caelestia", "theme", "wallpaper", "set", path]); }
+    function setLockWallpaper(path) { Quickshell.execDetached(["caelestia", "lock", "--set-lock-wallpaper", path]); }
     function setPfp(path) { Quickshell.execDetached(["caelestia", "theme", "pfp", "set", path]); }
-    function randomWallpaper() { Quickshell.execDetached(["caelestia", "theme", "wallpaper", "random"]); }
+    function setLockBackend(backend) { Quickshell.execDetached(["caelestia", "lock", "--set-backend", backend]); }
+    function setQylockTheme(theme) { Quickshell.execDetached(["caelestia", "lock", "--set-theme", theme]); }
+    function setHyprlockConfig(cfg) { Quickshell.execDetached(["caelestia", "lock", "--set-hyprlock-config", cfg]); }
 }
 ```
 
 ## Shell UI Options for Theme & Asset Selection
 
-Theme switching and asset pickers are accessible via two distinct UI interfaces:
+Theme switching and asset pickers are accessible via UI interfaces:
 
 ### Option A: Launcher Carousel (CarouselList.qml)
 
 Location: `lunar-shell/modules/launcher/CarouselList.qml`
 
 UI design:
-- Quick horizontal sliding carousel (PathView) for fast keyboard-driven selection of Themes, Profile Pictures, Wallpapers, and Lockscreen backgrounds.
-- Triggered by typing `>theme`, `>pfp`, `>wallpaper`, or `>lockscreen` in the launcher.
+- Quick horizontal sliding carousel (PathView) for fast keyboard-driven selection of Themes, Profile Pictures, and Wallpapers.
+- Triggered by typing `>theme`, `>pfp`, or `>wallpaper` in the launcher.
 - Fully supports Vim-style (`h`/`l`) and Arrow key navigation.
-- Preserves theme preview states cleanly and executes selections on `Enter`.
 
-### Option B: Nexus Settings Panel (ThemeSelect.qml & WallpaperSelect.qml)
+### Option B: Standalone Lock Screen Picker Window (LockPickerWindow.qml)
 
-Location: `lunar-shell/modules/nexus/pages/wallandstyle/ThemeSelect.qml`
+Location: `lunar-shell/modules/lock/LockPickerWindow.qml`
 
 UI design:
-- Full grid layout embedded inside the Nexus Settings panel (under Wallpaper & Style).
-- Displays visual cards of all themes available in `~/Pictures/themes/`.
-- Shows active theme badge and wallpaper preview thumbnails.
-- Allows browsing featured and local theme wallpapers in a multi-column grid (`WallpaperSelect.qml`).
+- Dedicated standalone overlay window triggered by `caelestia lock --picker` or launcher action `Lock Screen Picker`.
+- Features 4 backend tabs (`caelestia`, `hyprlock`, `qylock`, `custom-qylock`).
+- Full keyboard control (`Tab`, `←`/`→`, `↑`/`↓`, `Enter`, `Esc`).
+
+### Option C: Nexus Settings Panel (ThemeSelect.qml, WallpaperSelect.qml, LockPicker.qml)
+
+Location: `lunar-shell/modules/nexus/pages/wallandstyle/`
+
+UI design:
+- Embedded inside the Nexus Settings panel under Wallpaper & Style.
+- Visual grid cards for Theme selection (`ThemeSelect.qml`), Wallpaper browsing (`WallpaperSelect.qml`), and embedded Lock Picker (`LockPicker.qml`).
 
 ## Migration from Old Themes
 

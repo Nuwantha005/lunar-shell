@@ -31,7 +31,7 @@ This is NOT intended to be a public-facing project — it's a personalized deskt
 - **CLI Executable**: `~/.local/bin/caelestia` wrapper script calling `lunar-cli` via `~/.local/lib/python3.14/site-packages/caelestia` symlink.
 - **Lock Screen Themes**: Local relative symlink `lunar-shell/lock-themes` → `../lunar-lock/themes/` (ignored in `.gitignore`). Zero overhead, direct editing.
 - **Colour Engine**: Material You (M3 tokens via `materialyoucolor`). M3 colours funnelled to pywalfox for Firefox theming.
-- **Theme Storage**: `~/Pictures/themes/<name>/` with `wallpapers/` and `pfp/` subdirs. One wallpapers folder serves both desktop and lock screen.
+- **Theme Storage**: `~/Pictures/themes/<name>/` with `wallpapers/`, `pfp/`, and optional `hyprlock/` subdirs. Desktop wallpaper and lock screen wallpaper are decoupled (`selectedWallpaper` and `selectedLockWallpaper` in `theme.json`). Profile picture resolves `selectedPfp` -> `pfp.jpg` with fallback to `~/.face`.
 - **Upstream Merging**: Via `git fetch upstream` + `git cherry-pick` / `git merge upstream/main`.
 
 ## Current Status
@@ -46,8 +46,8 @@ This is NOT intended to be a public-facing project — it's a personalized deskt
 - [x] `lunar-lock` connected via `lock-themes` symlink
 - [x] Theme engine implementation (Phase 2)
 - [x] Dynamic colour persistence & Pywalfox bridge (Phase 3)
-- [x] Launcher Carousel (Unified picker for Theme, Pfp, Wallpaper, Lockscreen)
-- [ ] Lock screen integration (Phase 4)
+- [x] Launcher Carousel (Unified picker for Theme, Pfp, Wallpaper)
+- [x] Lock screen integration & multi-backend picker (Phase 4: `caelestia`, `qylock`, `custom-qylock`, `hyprlock`, labwc headless previews, video backgrounds)
 - [ ] Custom widgets (Phase 6)
 
 ## Quick Reference

@@ -3,86 +3,98 @@
 ## How the Stack Works
 
 ```
-User action (keybind / CLI)
+User action (keybind / CLI / Launcher / IPC)
         │
         ▼
-lunar-cli (Python, /usr/local/bin/lunar or pip editable)
+lunar-cli (Python package, invoked via ~/.local/bin/caelestia)
         │
-        │ writes state files
+        ├── writes state files to ~/.local/state/caelestia/
+        ├── triggers DBus signals (KGlobalSettings.notifyChange) for Qt/Dolphin
+        ├── recolors Kitty terminals via Unix sockets (kitten @ --to=unix:<sock>)
+        ├── funnels M3 colors to pywalfox (~/.cache/wal/colors.json)
+        └── communicates with QuickShell via IPC (qs ipc call lock ...)
+        │
         ▼
-~/.local/state/caelestia/        ← STATE DIRECTORY (shared with AUR caelestia)
+~/.local/state/caelestia/        ← STATE DIRECTORY
     ├── scheme.json              ← Active colour scheme (M3 palette JSON)
-    ├── theme.json               ← Active lunar theme (NEW)
+    ├── theme.json               ← Active lunar theme & lock configuration
+    ├── lock_override_bg         ← Active lockscreen background override path
+    ├── hyprlock.conf            ← Auto-generated runtime hyprlock launcher config
     ├── wallpaper/
     │   ├── path.txt             ← Current wallpaper path (watched by shell)
     │   ├── current → <path>     ← Symlink to wallpaper
     │   └── thumbnail.jpg        ← 128x128 thumbnail
-    └── pfp.jpg                  ← Current profile picture (symlink)
+    └── pfp.jpg                  ← Current profile picture (symlink to active pfp)
 
         │
-        │ FileView watches (QML)
+        │ FileView & FileSystemModel watch changes (QML)
         ▼
 lunar-shell (QML via QuickShell)
     ├── services/
     │   ├── Colours.qml          ← Reads scheme.json, exposes M3 palette
-    │   ├── Wallpapers.qml       ← Reads wallpaper/path.txt, manages picker
-    │   ├── Theme.qml            ← (NEW) Reads theme.json, exposes theme state
-    │   └── LockState.qml        ← (NEW) Reads lock backend from theme.json
+    │   ├── Wallpapers.qml       ← Reads wallpaper/path.txt, manages wallpapers & previews
+    │   ├── Theme.qml            ← Reads theme.json, exposes theme, lockBackend, pfp
+    │   └── LockState.qml        ← Exposes active lock backend and Qylock theme
     └── modules/
         ├── lock/
-        │   ├── Lock.qml         ← WlSessionLock wrapper (MODIFIED)
-        │   ├── LockSurface.qml  ← Default caelestia lock UI
-        │   └── QylockSurface.qml← (NEW) Embeds Qylock themes
+        │   ├── Lock.qml         ← WlSessionLock & IPC target ("lock")
+        │   ├── LockSurface.qml  ← Default Caelestia lock UI
+        │   ├── QylockSurface.qml← Embeds Qylock themes inside WlSessionLock
+        │   ├── LockPickerWindow.qml ← Standalone overlay window for Lock Picker
+        │   └── LockPickerContent.qml← 4-backend tabbed picker UI with keyboard nav
         ├── launcher/
-        │   ├── CarouselList.qml ← (NEW) Quick interactive launcher slider for wallpapers, themes, pfps, lock screens
-        │   ├── ContentList.qml  ← (MODIFIED) Routes autocomplete actions (>theme, >pfp, >lockscreen) to CarouselList
-        │   └── AppList.qml      ← (MODIFIED) Resolves launcher commands to autocomplete suggestions
+        │   ├── CarouselList.qml ← Launcher slider for wallpapers, themes, pfps
+        │   ├── ContentList.qml  ← Routes autocomplete actions (>theme, >pfp)
+        │   └── AppList.qml      ← Resolves launcher commands to actions
         └── nexus/pages/wallandstyle/
-            ├── ThemeSelect.qml  ← Full settings panel theme selection grid
-            └── WallpaperSelect.qml ← Scoped theme wallpaper selector grid
+            ├── ThemeSelect.qml  ← Settings panel theme selection grid
+            ├── WallpaperSelect.qml ← Theme wallpaper selector grid
+            └── LockPicker.qml   ← Embedded Lock Screen Picker tab
 ```
 
-## Key Data Flow: Wallpaper → Colours
+## Key Data Flow: Inter-App & Colour Pipeline
 
 ```
-User picks wallpaper (or theme auto-picks)
+User picks wallpaper / theme (or CLI runs set_wallpaper / set_theme)
     │
     ▼
 lunar-cli: set_wallpaper(path)
     ├── Writes path to ~/.local/state/caelestia/wallpaper/path.txt
-    ├── Generates thumbnail (128x128)
-    ├── Reads current scheme (scheme.json)
-    │   └── If scheme.name == "dynamic":
-    │       ├── Run materialyoucolor on thumbnail
-    │       ├── Get M3 palette
-    │       └── Update scheme.json
-    ├── apply_colours() → writes to all configured apps
-    │   ├── apply_hypr() → ~/.config/hypr/scheme/current.lua
-    │   ├── apply_gtk()  → gtk.css
-    │   ├── apply_terms() → /dev/pts/* (terminal colours)
-    │   └── funnel_to_pywalfox() → (NEW) ~/.cache/wal/colors.json + pywalfox update
-    └── Updates theme.json selectedWallpaper field (NEW)
+    ├── Generates 128x128 thumbnail in ~/.local/state/caelestia/wallpaper/thumbnail.jpg
+    ├── If scheme == "dynamic": generates M3 palette via materialyoucolor & updates scheme.json
+    ├── apply_colours():
+    │   ├── Hyprland   → writes ~/.config/hypr/scheme/current.lua
+    │   ├── GTK 3/4    → updates gtk.css & thunar.css
+    │   ├── Qt/Dolphin  → updates qtengine/caelestia.colors & sends DBus org.kde.KGlobalSettings.notifyChange
+    │   ├── Terminals  → scans /tmp & $XDG_RUNTIME_DIR for Kitty sockets, executes kitten @ --to=unix:<sock> set-colors
+    │   ├── Neovim     → updates ~/.config/nvim/lua/caelestia_theme.lua
+    │   └── Pywalfox   → generates ~/.cache/wal/colors.json & calls pywalfox update
+    └── Updates theme.json selectedWallpaper field
 
 lunar-shell: Colours.qml (FileView watches scheme.json)
-    └── Notified of change → reloads M3 palette → all QML rebinds
+    └── Reloads M3 palette → all QML UI rebinds live
 ```
 
-## Key Data Flow: Theme Switch
+## Key Data Flow: Lock System & Labwc Headless Previews
 
 ```
-User picks theme "jinx" (via ThemePicker.qml or CLI)
+CLI / Launcher action: caelestia lock --picker (or qs ipc call lock openPicker)
     │
     ▼
-lunar-cli: set_theme("jinx")
-    ├── Load ~/Pictures/themes/jinx/theme.json
-    ├── Pick wallpaper: theme.selectedWallpaper (or first in wallpapers/)
-    ├── set_wallpaper(wall) → triggers full colour pipeline above
-    ├── Apply lock settings: theme.lockBackend, theme.qylockTheme
-    ├── Copy selected pfp → ~/.local/state/caelestia/pfp.jpg
-    └── Save ~/.local/state/caelestia/theme.json
+QuickShell: Lock.qml IpcHandler receives openPicker()
+    └── Loads LockPickerWindow.qml (LockPickerContent.qml)
+        ├── Tab 0: Caelestia Lock (uses default WlSessionLock + Caelestia surface)
+        ├── Tab 1: Hyprlock (dispatches hyprlock with runtime ~/.local/state/caelestia/hyprlock.conf)
+        ├── Tab 2: Qylock (embeds Qylock theme Main.qml inside WlSessionLock)
+        └── Tab 3: Custom Qylock (embeds Qylock theme + custom wallpaper/video bg override)
 
-lunar-shell: Theme.qml (FileView watches theme.json)
-    └── Notified → updates currentTheme, lockBackend, etc.
+Preview Generation (caelestia lock --generate-previews / --render-preview):
+    ├── Spawns labwc in headless mode (WLR_BACKENDS=headless WLR_HEADLESS_OUTPUTS=1)
+    ├── Sets resolution (1920x1080) via wlr-randr
+    ├── If video bg (.mp4/.webm): extracts 1st frame via ffmpeg (-ss 00:00:01 -vframes 1)
+    ├── Launches hyprlock or qylock lock.sh script with settle delay (1.8s - 2.5s)
+    ├── Captures screenshot via grim → saves to ~/.cache/caelestia/previews/{hyprlock,custom-qylock}/<hash>.png
+    └── Updates manifest.json with SHA-256 cache keys
 ```
 
 ## State File: theme.json
@@ -97,68 +109,67 @@ Written to `~/.local/state/caelestia/theme.json`:
   "schemeFlavour": "default",
   "schemeMode": "dark",
   "schemeVariant": "tonalspot",
-  "selectedWallpaper": "/home/nuwa/Pictures/themes/jinx/wallpapers/wall1.jpg",
-  "selectedPfp": "/home/nuwa/Pictures/themes/jinx/pfp/pfp1.png",
-  "lockBackend": "caelestia",
-  "qylockTheme": null
+  "selectedWallpaper": "wallpapers/wall1.jpg",
+  "selectedLockWallpaper": "wallpapers/wall1.jpg",
+  "selectedPfp": "pfp/pfp1.png",
+  "lockBackend": "custom-qylock",
+  "qylockTheme": "nier-automata",
+  "hyprlockConfig": "lock_screen1.conf"
 }
 ```
 
 ## Python Package Layout (lunar-cli)
 
 ```
-src/caelestia/                    ← package name kept as "caelestia" for compatibility
+src/caelestia/
     __init__.py
     __main__.py
-    parser.py                     ← MODIFIED: adds theme + lock subcommands
+    parser.py                     ← CLI arguments (theme, lock, scheme, wallpaper, preview options)
     subcommands/
         scheme.py
         wallpaper.py
-        theme.py                  ← NEW
-        lock.py                   ← NEW (enhanced)
+        theme.py                  ← Theme commands
+        lock.py                   ← Lock backend launcher, IPC calls, preview CLI options
         install.py
         update.py
-        ...
     utils/
-        wallpaper.py              ← MODIFIED: theme-aware
-        scheme.py                 ← MODIFIED: user_locked flag
-        theme_engine.py           ← NEW
-        pywal_bridge.py           ← NEW
-        lock_engine.py            ← NEW
-        theme.py                  ← existing (apply_colours) MODIFIED
-        paths.py                  ← existing, add theme paths
-        ...
+        wallpaper.py              ← Smart dynamic M3 color generation & wallpaper state
+        scheme.py                 ← Scheme persistence & locked modes
+        theme_engine.py           ← Theme switching, lock wallpaper & hyprlock config setting
+        pywal_bridge.py           ← Pywalfox colors.json generator & bridge
+        preview.py                ← Headless labwc compositor capture, video frame extraction, manifest cache
+        theme.py                  ← App recoloring (Hyprland, GTK, Qt/Dolphin DBus, Kitty sockets, Neovim)
+        paths.py                  ← State & cache path definitions
 ```
 
 ## QML Module Layout (lunar-shell)
 
-New files only — everything else is upstream Caelestia:
-
 ```
 services/
-    Theme.qml               ← NEW singleton, watches theme.json
-    LockState.qml           ← NEW singleton, exposes lock backend
+    Theme.qml               ← Singleton: watches theme.json, exposes currentTheme, lockBackend, pfp
+    LockState.qml           ← Singleton: exposes lock backend and Qylock theme state
+    Colours.qml             ← Singleton: watches scheme.json, exposes M3 palette
 
 modules/
     lock/
-        Lock.qml            ← MODIFIED: dispatches to caelestia/qylock surface
-        QylockSurface.qml   ← NEW: embeds Qylock themes + uses Caelestia PAM
+        Lock.qml            ← WlSessionLock wrapper, IPC target ("lock"), shortcuts & hyprlock launcher
+        LockSurface.qml     ← Caelestia lock UI surface
+        QylockSurface.qml   ← Embeds Qylock themes + Caelestia PAM auth bridge
+        LockPickerWindow.qml← Standalone overlay window for lock screen selection
+        LockPickerContent.qml← Keyboard-driven tabbed UI (Caelestia, Hyprlock, Qylock, Custom Qylock)
 
     launcher/
-        CarouselList.qml    ← NEW: Shared component for theme/pfp/wallpaper launcher sliders
-        ContentList.qml     ← MODIFIED: Handles >theme, >pfp, >lockscreen
-        AppList.qml         ← MODIFIED: Exposes launcher autocomplete actions
+        CarouselList.qml    ← Launcher carousel slider for wallpapers, themes, pfps
+        ContentList.qml     ← Routes launcher autocomplete actions (>theme, >pfp)
+        AppList.qml         ← Exposes launcher autocomplete actions
 
     nexus/pages/wallandstyle/
         ThemeSelect.qml     ← Full settings panel grid for theme selection
         WallpaperSelect.qml ← Full settings panel grid for wallpaper selection
-
-    utilities/              ← NEW panel group (Phase 6)
-        ScreenshotTools.qml
-        BgRemover.qml
-        PdfMarker.qml
+        LockPicker.qml      ← Embedded Nexus Settings tab wrapping LockPickerContent.qml
 ```
 
 The CLI package is kept named `caelestia` for internal compatibility.
-The executable is installed to `~/.local/bin/caelestia` as a Python wrapper script, calling our `caelestia` Python package in `~/.local/lib/python3.14/site-packages/caelestia` (symlinked to `lunar-cli/src/caelestia`).
-The AUR packages (`caelestia-shell`, `caelestia-cli`) have been removed and replaced entirely with our system-installed `lunar-shell` build and `lunar-cli` setup.
+The executable is installed to `~/.local/bin/caelestia` as a Python wrapper script calling `lunar-cli`.
+All AUR packages (`caelestia-shell`, `caelestia-cli`) have been removed and replaced entirely with system-installed `lunar-shell` builds and `lunar-cli`.
+

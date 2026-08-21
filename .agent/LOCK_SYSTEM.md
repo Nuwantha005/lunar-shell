@@ -4,210 +4,174 @@
 
 | Backend | Trigger | Notes |
 |---------|---------|-------|
-| `caelestia` | QuickShell IPC `caelestia lock` | Default. Uses WlSessionLock inside QuickShell process. |
-| `qylock` | Embedded in lunar-shell's Lock.qml | Deep integration — Qylock themes run inside the SAME QuickShell process. |
-| `hyprlock` | `hyprlock` binary | External. locks unique to the themes. stored at `~/Pictures/themes/<theme-name>/hyprlock.conf` (Caelestia manages this). |
+| `caelestia` | QuickShell IPC `caelestia lock` | Default. Uses WlSessionLock inside QuickShell process with Caelestia PAM auth surface. |
+| `qylock` | QuickShell IPC `caelestia lock -b qylock -t <theme>` | Deep integration — Qylock themes run inside the SAME QuickShell process via `QylockSurface.qml`. |
+| `custom-qylock` | QuickShell IPC `caelestia lock -b custom-qylock` | Qylock theme embedded inside WlSessionLock with custom wallpaper or video background override set in Caelestia (`~/.local/state/caelestia/lock_override_bg`). |
+| `hyprlock` | `hyprlock` binary | External. Sourced per-theme configs stored at `~/Pictures/themes/<theme-name>/hyprlock/*.conf` via dynamically generated runtime config `~/.local/state/caelestia/hyprlock.conf`. |
 
+## State Management
 
-## State
-
-Lock backend and Qylock theme are stored inside `theme.json`:
+Lock backend, Qylock theme, decoupled lock wallpaper, and Hyprlock config are stored inside `theme.json`:
 
 ```json
 {
-  ...,
-  "lockBackend": "qylock",
-  "qylockTheme": "nier-automata"
+  "name": "jinx",
+  "path": "/home/nuwa/Pictures/themes/jinx",
+  "scheme": "dynamic",
+  "selectedWallpaper": "wallpapers/wall1.jpg",
+  "selectedLockWallpaper": "wallpapers/wall1.jpg",
+  "selectedPfp": "pfp/pfp1.png",
+  "lockBackend": "custom-qylock",
+  "qylockTheme": "nier-automata",
+  "hyprlockConfig": "lock_screen1.conf"
 }
 ```
 
-Exposed to QML via `Theme.qml` singleton (`Theme.lockBackend`, `Theme.qylockTheme`). For hyprlock and phase 4b lock, we use the wallpaper image as the background.
+Exposed to QML via `Theme.qml` singleton (`Theme.lockBackend`, `Theme.qylockTheme`, `Theme.hyprlockConfig`).
 
 ## Deep Qylock Integration Architecture
 
 ### Why "deep integration"?
 
-Qylock's `quickshell.sh` launcher runs a SEPARATE QuickShell process (`lock_shell.qml`).
-This is messy — it conflicts with the running lunar-shell process, and the themes
-use an SDDM shim for auth which doesn't work cleanly with Hyprland session lock.
+Qylock's native `quickshell.sh` launcher runs a SEPARATE QuickShell process (`lock_shell.qml`), which conflicts with the running lunar-shell process and uses an SDDM shim for auth. Deep integration runs Qylock themes INSIDE lunar-shell's existing `WlSessionLock` using lunar-shell's native PAM authentication (`Pam.qml`).
 
-Deep integration means: run Qylock themes INSIDE lunar-shell's existing WlSessionLock,
-using lunar-shell's PAM auth (Pam.qml) — same as the caelestia lock surface.
+### lunar-lock Repository Role
 
-### lunar-lock repo role
+`lunar-lock` (our fork of qylock) is connected via a local relative symlink:
+`lunar-shell/lock-themes` → `../lunar-lock/themes/` (ignored in `lunar-shell/.gitignore`).
 
-`lunar-lock` (fork of qylock) is NOT run as a separate process.
-We take its `themes/` directory and use the `Main.qml` from each theme.
-The `lock_shell.qml`, `lock.sh`, and SDDM shim are NOT used.
+`QylockSurface.qml` loads the target theme directly:
+`Qt.resolvedUrl("../../lock-themes/themes/" + Theme.qylockTheme + "/Main.qml")`
 
-The `lunar-lock` repo is either:
-- A **git submodule** inside `lunar-shell/lock-themes/` → keeps themes updatable
-However, qylock is a massive 1.5 GB repo. Adding it as a submodule will drain network for no reason and consume storage as well. apart from that, I needed to maintain it as a fork, so i forked the original repo and placed it in `/home/nuwa/work-linux/projects/arch/shell/lunar-lock` folder. What we can do is either symlink it to inside of the lunar-shell or someone use the 2 modules independently. Need an evaluation on the options.
-- OR themes are copied directly into lunar-shell
-
-Recommended: **git submodule** at `lunar-shell/lock-themes` pointing to `lunar-lock`.
-
-```bash
-cd lunar-shell
-git submodule add https://github.com/Nuwantha005/lunar-lock.git lock-themes
-```
-
-Then `Lock.qml` references themes at: `Qt.resolvedUrl("../../lock-themes/themes/" + Theme.qylockTheme + "/Main.qml")`
-
-### Modified Lock.qml
+### Lock Dispatching in `Lock.qml`
 
 Location: `lunar-shell/modules/lock/Lock.qml`
 
-```qml
-WlSessionLock {
-    id: lock
+`Lock.qml` wraps `WlSessionLock` and registers `IpcHandler` targeting `"lock"`.
 
-    LockSurface {   // this becomes a Loader that switches surfaces
-        lock: lock
-        pam: pam
+```qml
+Scope {
+    property alias lock: lock
+
+    WlSessionLock {
+        id: lock
+        signal unlock
+
+        LockSurface {
+            lock: lock
+            pam: pam
+        }
     }
-}
-```
 
-Becomes:
-
-```qml
-WlSessionLock {
-    id: lock
-
-    // Dynamic surface based on backend
-    Loader {
-        property var lock: lock  // pass lock ref
-        property var pam: pam
-        source: {
-            switch (Theme.lockBackend) {
-                case "qylock":  return "QylockSurface.qml"
-                case "hyprlock": return ""  // dispatched externally below
-                default:         return "LockSurface.qml"
+    Connections {
+        target: lock
+        function onLockedChanged(): void {
+            if (lock.locked && Theme.lockBackend === "hyprlock") {
+                lock.locked = false; // release WlSessionLock
+                Quickshell.execDetached(["hyprlock"]);
             }
         }
-        onLoaded: item.lock = lock
     }
-}
 
-// Hyprlock: dispatch externally when requested
-Connections {
-    target: lock
-    function onLockedChanged() {
-        if (lock.locked && Theme.lockBackend === "hyprlock") {
-            lock.locked = false;  // release our lock
-            Quickshell.execDetached(["hyprlock"]);
-        }
-    }
-}
-```
+    Pam { id: pam; lock: lock }
 
-### New QylockSurface.qml
-
-Location: `lunar-shell/modules/lock/QylockSurface.qml`
-
-```qml
-// Embeds a Qylock theme's Main.qml using our PAM auth
-import QtQuick; import Quickshell; import Quickshell.Wayland; import qs.components.misc
-
-Item {
-    property var lock   // WlSessionLock ref
-    property var pam    // Pam.qml ref (handles PAM auth, same as caelestia)
-
-    readonly property string themePath:
-        Quickshell.shellPath("lock-themes/themes/" + Theme.qylockTheme)
-
-    Loader {
-        anchors.fill: parent
-        source: "file://" + themePath + "/Main.qml"
-        onLoaded: {
-            // Inject auth signal — Qylock themes expect an `authenticate(password)` signal
-            // and emit `authenticated` or `failed`
-            item.forceActiveFocus()
-        }
-        onStatusChanged: {
-            if (status === Loader.Error)
-                console.error("Failed to load Qylock theme:", source)
+    CustomShortcut {
+        name: "unlock"
+        description: "Unlock the current session"
+        onPressed: {
+            lock.unlock();
+            Quickshell.execDetached(["pkill", "-USR1", "hyprlock"]);
         }
     }
 
-    // Bridge: listen for password submit from Qylock theme UI
-    // Qylock themes emit passwordSubmitted(pass) or similar
-    // We forward to Pam for verification
-    Connections {
-        target: loader.item
-        // Adapt based on actual signal name in each theme
-        function onPasswordSubmitted(password) { pam.authenticate(password) }
+    LazyLoader {
+        id: lockPickerLoader
+        Variants {
+            model: Screens.screens
+            LockPickerWindow {
+                modelData: modelData
+                onClose: lockPickerLoader.activeAsync = false
+            }
+        }
+    }
+
+    IpcHandler {
+        function lock(): void { lock.locked = true; }
+        function unlock(): void { lock.unlock(); Quickshell.execDetached(["pkill", "-USR1", "hyprlock"]); }
+        function isLocked(): bool { return lock.locked; }
+        function openPicker(): void { lockPickerLoader.activeAsync = true; }
+        function closePicker(): void { lockPickerLoader.activeAsync = false; }
+        target: "lock"
     }
 }
 ```
 
-> NOTE: Qylock themes were designed for SDDM (different auth flow). Some adaptation
-> of the auth bridging may be needed per-theme. This is the main complexity of deep integration.
+## Instant Lock Screen Picker Window
 
-### Keybind
+Location: `lunar-shell/modules/lock/LockPickerWindow.qml` & `LockPickerContent.qml`
 
-Update `~/.config/hypr/caelestia/hyprland/keybinds_extra.conf`:
-```ini
-# OLD:
-bind = SUPER, L, exec, hyprlock
-# NEW:
-bind = SUPER, L, exec, caelestia lock
-```
+Triggered via `caelestia lock --picker` or IPC call `qs ipc call lock openPicker`.
 
-The `caelestia lock` command reads `theme.json` and triggers the appropriate backend:
-- For `caelestia` and `qylock`: sends IPC message to QuickShell to lock
-- For `hyprlock`: runs hyprlock directly
+### Features & Layout:
+- **4 Backend Tabs**: `[Caelestia]` `[Hyprlock]` `[Qylock]` `[Custom Qylock]`
+- **Keyboard Navigation**:
+  - `Tab` / `Shift+Tab`: Cycle active backend tab
+  - `←` / `→`: Cycle Qylock Theme (for Qylock / Custom Qylock) or Lock Wallpaper (for Hyprlock / Custom Qylock)
+  - `↑` / `↓`: Cycle Profile Picture (for Caelestia / Hyprlock) or Qylock Theme (for Custom Qylock)
+  - `Enter` / `Space`: Apply current selection and close window
+  - `Esc`: Close window without applying
+- **Lazy Loading**: `LockPickerWindow` is loaded asynchronously via `LazyLoader` in `Lock.qml` on `openPicker()` IPC call.
+- **Embedded Tab in Settings**: `LockPickerContent.qml` is also embedded into Nexus Settings (`modules/nexus/pages/wallandstyle/LockPicker.qml`).
+
+## Headless Labwc Preview Engine & Cache Architecture
+
+To provide instant previews in the lock picker for `hyprlock` and `custom-qylock` backends, `lunar-cli` includes a headless rendering pipeline (`utils/preview.py`).
+
+### Headless Execution (`capture_with_labwc`):
+- **Environment**: Sets `WLR_BACKENDS=headless WLR_HEADLESS_OUTPUTS=1`, removing `HYPRLAND_INSTANCE_SIGNATURE`.
+- **Headless Compositor**: Launches `labwc` with a runner script configuring resolution `1920x1080` via `wlr-randr`.
+- **Settling Delays**: Waits for visuals to load before taking a screenshot using `grim`:
+  - `HYPRLOCK_SETTLE_DELAY = 1.8` seconds
+  - `CUSTOM_QYLOCK_SETTLE_DELAY = 2.5` seconds
+- **Video Background Frame Extraction**: If the lock screen background is a video (`.mp4`, `.webm`, `.mkv`), `ffmpeg` extracts the frame at 1s:
+  `ffmpeg -y -ss 00:00:01 -i <video> -vframes 1 <tmp.png>`
+
+### Cache Location & Keying:
+- **Path**: `~/.cache/caelestia/previews/{hyprlock,custom-qylock}/`
+- **Manifest**: `manifest.json` tracks metadata, parameters, and generated timestamps.
+- **Cache Keying**: SHA-256 hash of concatenated file mtime identities (`path:mtime_ns`) and config/theme IDs (`preview_cache_key`). Modifying a wallpaper or PFP automatically invalidates the cache key.
+- **CLI Commands**:
+  - Batch generation: `caelestia lock --generate-previews`
+  - On-Demand JIT rendering: `caelestia lock --render-preview --preview-backend <backend> --preview-wallpaper <wall> --preview-output <dest>`
 
 ## CLI: lock.py Subcommand
 
 Location: `lunar-cli/src/caelestia/subcommands/lock.py`
 
+```bash
+caelestia lock                                    # Lock session using active backend
+caelestia lock -b, --backend <backend>            # Switch backend and lock
+caelestia lock -t, --theme <theme>                # Switch Qylock theme and lock
+caelestia lock -p, --picker                       # Open instant Lock Screen Picker window
+caelestia lock --hyprlock-config <cfg.conf>       # Switch Hyprlock config and lock
+caelestia lock --set-backend <backend>            # Set backend in theme.json without locking
+caelestia lock --set-theme <theme>                # Set Qylock theme in theme.json without locking
+caelestia lock --set-hyprlock-config <cfg.conf>   # Set Hyprlock config in theme.json without locking
+caelestia lock --set-lock-wallpaper <path>        # Set lock screen background override
+caelestia lock --list-backends                    # List backends (* for active)
+caelestia lock --list-themes                      # List available Qylock themes
+caelestia lock --list-hyprlock-configs            # List Hyprlock configs for active theme
+caelestia lock --generate-previews                # Batch generate headless preview cache
+caelestia lock --render-preview ...               # Render a single preview image JIT
 ```
-caelestia lock                                    → lock with current backend
-caelestia lock --backend caelestia                → switch backend + lock
-caelestia lock --backend qylock --theme nier-automata → switch backend + theme + lock
-caelestia lock --backend hyprlock                 → switch to hyprlock + lock
-caelestia lock --list-backends                    → print available backends
-caelestia lock --list-themes                      → list available Qylock themes
-caelestia lock --set-backend qylock               → change backend without locking
-caelestia lock --set-theme pixel-sakura           → change theme without locking
-```
 
-Lock action sends IPC to QuickShell:
-```python
-subprocess.run(["caelestia", "shell", "lock"], ...)
-# Or directly via QS IPC:
-subprocess.run(["qs", "ipc", "call", "lock", "lock"], ...)
-```
+## Emergency Unlock Mechanism
 
-## LockPicker.qml Panel
+If lock screen authentication fails or hangs:
+- Keyboard shortcut `CustomShortcut { name: "unlock" }` or IPC call `qs ipc call lock unlock` triggers `pkill -USR1 hyprlock` and releases `WlSessionLock`.
+- Available as CLI fallback command options.
 
-A panel in the dashboard to configure lock settings:
 
-- Segmented: [Caelestia] [Qylock] [hyprlock]
-- When Qylock selected: scrollable grid of Qylock themes (37 available) similar to how wallpapers or themes are shown in quick picker.Both caelestia and hyprlock locks are one per theme: meaning we don't need a seperate carousel type chooser for them, we only need it for qylock lock and phase 4b custom background thing.
-  - Each shows theme preview image from `lock-themes/Assets/previews/<name>/`
-  qylock proivdes animated set of gifs (or videos) for each lock. For custom locks like hyprlock or caelestia lock, we might have to render them somehow.
-  - Clicking a theme: calls `caelestia lock --set-theme <name>`
-- Apply immediately or just change setting
-
-## Qylock Theme Custom Background (Phase 4b)
-
-When a theme's wallpaper should replace the Qylock theme's background:
-
-1. CLI `set_theme()` writes selected wallpaper path to `~/.local/state/caelestia/lock_override_bg`
-2. `QylockSurface.qml` reads this file and sets it as background:
-   ```qml
-   FileView {
-       path: Paths.state + "/lock_override_bg"
-       onLoaded: backgroundOverridePath = text().trim()
-   }
-   ```
-3. Pass `backgroundOverridePath` to the loaded Qylock theme's background component
-
-This is per-theme implementation (each Qylock theme's Main.qml needs to support it).
-Start with one or two themes. Not urgent.
 
 # Additional Notes and Future Work
 
