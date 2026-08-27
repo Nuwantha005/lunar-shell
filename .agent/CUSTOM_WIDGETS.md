@@ -137,9 +137,9 @@ This approach:
 
 Identify them by reading `shell.qml` and `modules/` directory.
 
-## Future Ideas (Not yet planned)
+## Future Ideas
+- [x] battery max charge limiter with values [60%, 80%, 100%] using `~/dotfiles/customScripts/battery-toggle.sh` at the bottom of the battery status QML widget (Completed)
 - add auto paste to QML Clipboard viewer
 - add image preview support for QML clipboard viewer
-- add battery max charge limiter with valuess [60%, 80%, 100%] using ~/dotfiles/customScripts/batter_toggle.sh` to the bottom of the battery status QML widget.
 - add a quick audio output / input switcher form speakers to BT: one that actually works for all sources.
 

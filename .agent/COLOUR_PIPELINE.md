@@ -213,3 +213,8 @@ Key tokens used in QML (`Colours.m3<name>`):
 - `m3background` — page background
 
 Terminal mappings (term0-15) follow standard 16-colour order.
+
+
+# Known Issues and Future Work
+- The IPC colour change method via `kitten` is a little bit slower and we can observe the delay in colour change since terminal is thh first one to change the colour. We can send it to last but it will still show the delay. Right now its not a big issue.
+- Code blocks in neovim doesn't change colour dynamically in preview.

@@ -209,3 +209,20 @@ I think I should add this to portfolio. But before that i neeed to clean files i
 
 ## Developement
 I'm kinda getting fratigue for non stop working on this for few days so i will move on to something else and come back later. (or never idk) As my last action I will try to add video support for custom qylock -  really want that reze dancing video as my lock bg....
+
+## SDDM vs In-Session Lock Sync (Future Exploration)
+
+### Core Problem:
+- SDDM runs in system space (as `sddm` system user before login, configs in `/etc/sddm.conf.d/` and themes in `/usr/share/sddm/themes/`).
+- Caelestia themes run purely in user space (`~/Pictures/themes/`, instant unprivileged switching).
+- Backends asymmetry: `hyprlock` (needs running compositor) and `caelestia native` (needs Quickshell runtime, M3 colors, live screencopy blur) cannot run inside SDDM. Only `qylock` themes work in SDDM since they were originally SDDM QML themes.
+- Syncing user theme assets to `/usr/share/sddm/` on every switch would require root/polkit elevation, adding unnecessary latency and complexity. Also, SDDM cannot trigger user Hyprland emergency keybinds (`caelestia:unlock`) since Hyprland isn't running yet at boot.
+
+### Approach 1: Decoupled Setup (Recommended)
+- Set SDDM once with a clean static/video theme (e.g. `girl-coffee` or `pixel-cyberpunk` via `sddm.sh`) as the global boot gate.
+- Keep in-session lock dynamic (switchable between Caelestia, Hyprlock, and Qylock via `theme.json` without root).
+
+### Approach 2: System-wide Generic SDDM Staging
+- Create a generic SDDM theme template reading from a fixed system staging path (e.g. `/var/lib/sddm/current_bg.{png,mp4}`).
+- Add a hook in `caelestia theme set` via polkit/systemd to copy the active wallpaper/video to that staging path on change. (Limited to background sync only; widgets/layouts won't match non-Qylock backends).
+
