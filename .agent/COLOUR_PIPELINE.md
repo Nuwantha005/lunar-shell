@@ -9,6 +9,7 @@ M3 (Material You) colours extracted by `materialyoucolor` are funnelled to:
 4. **Terminals** — via `kitten @ --to=unix:<sock> set-colors --all -c ~/.local/state/caelestia/kitty-colors.conf` (Kitty remote control IPC sockets) & `sequences.txt`
 5. **Neovim** — via `~/.config/nvim/lua/caelestia_theme.lua` (custom lua script)
 6. **Firefox** — via pywalfox (`pywal_bridge.py`) writing to `~/.cache/wal/colors.json`
+7. **Obsidian** — via auto-discovered vault CSS snippets (`<vault>/.obsidian/snippets/caelestia.css`) from `templates/obsidian.css`
 
 ### Live Carousel Preview Pipeline
 
@@ -19,8 +20,9 @@ During launcher carousel navigation (`>wallpaper` / `>theme`):
    - **Qt / Dolphin**: `apply_qt()` updates `qtengine/caelestia.colors` & `caelestia.qss` (floating container cards, rounded borders, pill tabs) and sends DBus `org.kde.KGlobalSettings.notifyChange` signal to live-update Qt/KDE apps (like Dolphin) on hover.
    - **Neovim**: `apply_nvim()` updates `~/.config/nvim/lua/caelestia_theme.lua` live.
    - **Firefox**: `funnel_to_pywalfox()` generates Pywal `colors.json` (`color0` = `bg`, `color7/15` = `fg`) and updates Pywalfox live on hover.
+   - **Obsidian**: `apply_obsidian()` updates `<vault>/.obsidian/snippets/caelestia.css` live on hover.
    - **QML Shell**: Returns JSON palette to QML `Colours.qml` (`showPreview = true`).
-3. **Exit / Cancel Preview**: `stopPreview()` in `Wallpapers.qml` triggers `caelestia scheme restore` to revert terminals, Qt/Dolphin, Neovim, and Firefox back to the active saved scheme.
+3. **Exit / Cancel Preview**: `stopPreview()` in `Wallpapers.qml` triggers `caelestia scheme restore` to revert terminals, Qt/Dolphin, Neovim, Firefox, and Obsidian back to the active saved scheme.
 4. **Apply Selection**: `set_wallpaper` saves the new scheme permanently to `scheme.json`, executes full `apply_colours`, and sends a soundless low-urgency toast notification (`notify-send -u low`).
 
 ### GTK3 vs Qt Live Reloading Notes
@@ -184,6 +186,27 @@ This means Firefox gets updated whenever:
 - Wallpaper changes (scheme regenerated)
 - Theme changes
 - User explicitly runs `caelestia scheme set`
+
+## Obsidian Dynamic Sync & Live Hot-Reload (NEW)
+
+### Why & How It Works
+
+Obsidian is an Electron application that includes a native background file watcher over `<vault>/.obsidian/snippets/`.
+Unlike GTK3 apps that require restarts, Obsidian re-evaluates CSS custom properties directly in DOM memory the millisecond a snippet file changes on disk. This enables **zero-latency live color hot-reloading**.
+
+### Architecture: Template Modularity & Auto-Discovery
+
+Instead of hardcoding vault paths or using a 16-color pywal limitation:
+1. **Master Template**: `lunar-cli/src/caelestia/data/templates/obsidian.css` maps the complete 30+ Material You (M3) palette tokens (`surface`, `surfaceContainer`, `outlineVariant`, `primary`, `onPrimary`, `primaryContainer`, `onSurface`, etc.) to:
+   - Standard Obsidian CSS variables (`--background-primary`, `--background-secondary`, `--text-normal`, `--text-accent`, `--interactive-accent`, `--tab-background-active`, `--nav-item-color-active`, `--code-background`, etc.).
+   - Tokyo Night theme specific color variables (`--bg`, `--bg_dark`, `--fg`, `--blue`, `--cyan`, `--magenta`, `--bg_highlight`, etc.), allowing the user to preserve the Tokyo Night theme's font hierarchy, padding, and layout while dynamically adopting the M3 palette.
+2. **Zero-Hardcoding Vault Discovery**: `find_obsidian_vaults()` parses `~/.config/obsidian/obsidian.json` at runtime to locate all registered vaults on the system. Custom vault paths can also be set in `~/.config/caelestia/cli.json` under `theme.obsidianVaults`.
+3. **Automatic Registration**: `apply_obsidian()` writes the rendered CSS to `<vault>/.obsidian/snippets/caelestia.css` and automatically registers `"caelestia"` inside `<vault>/.obsidian/appearance.json` (`enabledCssSnippets`).
+
+### Live Carousel Preview & Restore Integration
+
+- **Hover Preview**: In `lunar-cli/src/caelestia/utils/wallpaper.py`, `get_colours_for_wall()` (executed during `caelestia wallpaper -p <image>`) calls `apply_obsidian(res["colours"])` so Obsidian live-previews colors as the user scrolls through the launcher carousel.
+- **Preview Cancel / Restore**: When exiting preview without selecting, `Wallpapers.qml` dispatches `caelestia scheme restore`, which executes `apply_colours()` -> `apply_obsidian()` to seamlessly revert Obsidian back to the active saved scheme.
 
 ## Scheme Variants Available
 

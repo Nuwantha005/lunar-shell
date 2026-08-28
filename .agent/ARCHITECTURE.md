@@ -12,6 +12,7 @@ lunar-cli (Python package, invoked via ~/.local/bin/caelestia)
         ├── triggers DBus signals (KGlobalSettings.notifyChange) for Qt/Dolphin
         ├── recolors Kitty terminals via Unix sockets (kitten @ --to=unix:<sock>)
         ├── funnels M3 colors to pywalfox (~/.cache/wal/colors.json)
+        ├── live-updates Obsidian vault CSS snippets (<vault>/.obsidian/snippets/caelestia.css)
         └── communicates with QuickShell via IPC (qs ipc call lock ...)
         │
         ▼
@@ -68,7 +69,8 @@ lunar-cli: set_wallpaper(path)
     │   ├── Qt/Dolphin  → updates qtengine/caelestia.colors & sends DBus org.kde.KGlobalSettings.notifyChange
     │   ├── Terminals  → scans /tmp & $XDG_RUNTIME_DIR for Kitty sockets, executes kitten @ --to=unix:<sock> set-colors
     │   ├── Neovim     → updates ~/.config/nvim/lua/caelestia_theme.lua
-    │   └── Pywalfox   → generates ~/.cache/wal/colors.json & calls pywalfox update
+    │   ├── Pywalfox   → generates ~/.cache/wal/colors.json & calls pywalfox update
+    │   └── Obsidian   → renders templates/obsidian.css & writes <vault>/.obsidian/snippets/caelestia.css
     └── Updates theme.json selectedWallpaper field
 
 lunar-shell: Colours.qml (FileView watches scheme.json)
