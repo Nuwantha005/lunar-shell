@@ -18,6 +18,9 @@ Singleton {
     property string lockBackend: "caelestia"
     property string qylockTheme: ""
     property string hyprlockConfig: ""
+    property list<string> hyprlockConfigs: []
+    property string selectedLockWallpaper: ""
+    property string selectedPfp: ""
     readonly property var currentThemeObj: {
         const list = themesList || [];
         return list.find(t => t.name === currentTheme) || ({});
@@ -31,7 +34,7 @@ Singleton {
         id: themesDirModel
 
         path: `${Paths.home}/Pictures/themes`
-        filter: FileSystemModel.Directories
+        filter: FileSystemModel.Dirs
         onEntriesChanged: root.refreshThemeList()
     }
 

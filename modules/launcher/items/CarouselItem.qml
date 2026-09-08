@@ -86,7 +86,7 @@ Item {
             CachingImage {
                 anchors.fill: parent
                 path: root.modelData?.imagePath ?? root.modelData?.path ?? ""
-                smooth: !(root.PathView.view as any)?.moving
+                smooth: !root.PathView.view?.moving
                 sourceSize: {
                     const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
                     return Qt.size(image.implicitWidth * dpr, image.implicitHeight * dpr);
