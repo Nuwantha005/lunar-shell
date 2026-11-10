@@ -31,7 +31,7 @@ StyledRect {
     border.width: 0
 
     Behavior on color {
-        Anim {}
+        CAnim {}
     }
 
     // Active accent indicator pill on the left
@@ -53,14 +53,18 @@ StyledRect {
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-        onEntered: root.selectClicked()
-        onClicked: mouse => {
-            if (mouse.button === Qt.RightButton) {
-                root.deleteClicked();
-            } else {
-                root.pasteClicked();
-            }
-        }
+    onPositionChanged: mouse => {
+        const p = mouseArea.mapToItem(null, mouse.x, mouse.y);
+        const last = Clipboard.lastHoverPos;
+        Clipboard.lastHoverPos = Qt.point(p.x, p.y);
+
+        // First event after opening is the synthetic one, so just record it
+        if (last.x < 0) return;
+        // Same window position means the list moved, not the mouse
+        if (Math.abs(p.x - last.x) < 1 && Math.abs(p.y - last.y) < 1) return;
+
+        root.selectClicked();
+    }
     }
 
     RowLayout {

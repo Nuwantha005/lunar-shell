@@ -17,7 +17,7 @@ Singleton {
     property string searchText: ""
     property int selectedIndex: 0
     readonly property var currentEntry: selectedIndex >= 0 && selectedIndex < filteredEntries.length ? filteredEntries[selectedIndex] : null
-
+    property point lastHoverPos: Qt.point(-1, -1)
     property var cachedImages: ({})
     property string previewText: ""
     property string previewImagePath: ""
@@ -32,6 +32,7 @@ Singleton {
         searchText = "";
         previewText = "";
         previewImagePath = "";
+        lastHoverPos = Qt.point(-1, -1);
         isListLoading = true;
         checkCacheProc.running = false;
         checkCacheProc.running = true;
